@@ -9,6 +9,9 @@ packages = [{include = "vioratalk", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11.9"
+apscheduler = "^3.11.0"
+pyyaml = "^6.0.2"
+typing-extensions = "^4.14.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -17,6 +20,8 @@ isort = "^5.13.0"
 flake8 = "^6.1.0"
 mypy = "^1.5.0"
 pre-commit = "^3.5.0"
+pytest-asyncio = "0.21.0"
+pytest-cov = "^6.2.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,3 +40,42 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--cov=vioratalk",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-branch",
+    "-v",
+]
+asyncio_mode = "auto"
+markers = [
+    "unit: 単体テスト",
+    "integration: 統合テスト",
+    "e2e: エンドツーエンドテスト",
+    "slow: 実行に時間がかかるテスト",
+    "phase: 特定のPhaseでのテスト",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+# Phase 1の目標カバレッジ: 60%
+fail_under = 60
