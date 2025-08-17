@@ -1,0 +1,12 @@
+# 日本語エラーメッセージ（Phase 0最小構成）
+errors:
+  general:
+    unknown: "不明なエラーが発生しました"
+    not_implemented: "この機能はまだ実装されていません"
+  
+  file:
+    not_found: "ファイルが見つかりません: {filename}"
+    permission_denied: "ファイルへのアクセス権限がありません: {filename}"
+  
+  network:
+    connection_failed: "接続に失敗しました"

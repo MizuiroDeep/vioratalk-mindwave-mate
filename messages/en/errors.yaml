@@ -1,0 +1,12 @@
+# English error messages (Phase 0 minimal)
+errors:
+  general:
+    unknown: "An unknown error occurred"
+    not_implemented: "This feature is not yet implemented"
+  
+  file:
+    not_found: "File not found: {filename}"
+    permission_denied: "Permission denied: {filename}"
+  
+  network:
+    connection_failed: "Connection failed"
