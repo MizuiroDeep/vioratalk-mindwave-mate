@@ -8,7 +8,7 @@ Copyright (c) 2025 MizuiroDeep
 License: MIT
 """
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 __author__ = "MizuiroDeep"
 __email__ = "36126374+MizuiroDeep@users.noreply.github.com"
 __license__ = "MIT"
