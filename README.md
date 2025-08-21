@@ -14,47 +14,63 @@ AIキャラクターと自然に会話できるデスクトップ音声アシス
 
 ---
 
-## 📌 Latest Release
-
-**[v0.1.0 - Core Foundation](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/releases/tag/v0.1.0)** (2025-08-20)
-
-We've completed the core foundation with 9 essential components, achieving 86.52% test coverage across 305 tests. This establishes a solid base for the upcoming dialogue system.
-
-詳細: [Changelog](CHANGELOG.md) | [Release Notes](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/releases/tag/v0.1.0)
-
----
-
 ## English
 
 ### About This Project
 
-VioraTalk is a personal learning project where I'm developing an AI voice assistant with the help of Claude AI. As someone relatively new to Python, I'm building this step by step, focusing on creating something genuinely useful while learning best practices along the way.
+VioraTalk is a personal learning project where I'm developing an AI voice assistant with Claude AI's help. As someone still learning Python, I'm building this step by step, focusing on creating something practical while learning proper development practices.
 
-The goal is simple: create a desktop assistant that feels natural to talk to, with characters that have their own personalities and can remember past conversations.
+The goal is to create a desktop assistant that feels natural to talk to, with characters that have their own personalities and can remember past conversations.
+
+### Project Vision & Roadmap
+
+This project follows a transparent development approach:
+
+**Current Status:**
+- Phase 1 (Core Foundation) completed ✅
+- Phase 2 (Dialogue System) in progress 🚧
+- Learning and developing in public
+
+**Development Philosophy:**
+- **Forever Free Core**: All essential features will always be free and open source
+- **BYOK Model**: Bring Your Own Key - you control your API costs
+- **Learning First**: Code quality improves as I learn
+
+**Future Plans:**
+While the core features will always remain free, I'm planning to develop optional extended features in the future (Phase 13+) to sustain long-term development. The free version will always be fully functional.
 
 ### Features
 
-VioraTalk aims to provide:
+VioraTalk offers:
 
-- **Push-to-Talk voice interaction** - Press Space to talk, just like a walkie-talkie
-- **Multiple AI models** - Works with Gemini, Claude, ChatGPT, and local models via Ollama
-- **Character personalities** - Each character has unique traits and speaking styles
-- **Memory system** - Characters remember your previous conversations
-- **Offline capability** - Can run entirely on your machine with local models
-- **Bilingual support** - Full Japanese and English interface
+- **Voice Interaction** - Push-to-Talk voice input using the spacebar
+- **Multiple AI Support** - Works with Gemini, Claude, ChatGPT, and Ollama (local)
+- **Character System** - Each character has unique personality and speaking style
+- **Memory System** - Remembers past conversations within a session
+- **Offline Capability** - Full offline operation with local models
+- **Bilingual Support** - Interface available in Japanese and English
 
-### Current Status
+### Feature Availability
 
-This is a work in progress. Phase 1 (core foundation) is complete, and I'm now working on Phase 2 (dialogue system). The project follows a structured development plan, but I'm taking my time to learn and implement things properly.
+| Feature | Free (Forever) | Extended (Future) |
+|---------|---------------|-------------------|
+| Core voice chat | ✅ Full | ✅ Full |
+| GUI application | ✅ Full | ✅ Full |
+| Basic characters (3) | ✅ | ✅ |
+| Additional characters | ❌ | ✅ More variety |
+| Memory duration | Session | Extended |
+| Emotion types | Basic | More nuanced |
+| Commercial use | ❌ | ✅ |
+| Support | Community | Priority |
 
-If you're interested in following along or want to see how a Python beginner tackles a complex project with AI assistance, you're welcome to star the repository or join the discussions.
+**Note**: The free version will always remain fully functional. Extended features are optional additions, not restrictions.
 
 ### Requirements
 
 - Windows 11 (Windows 10 support planned)
 - Python 3.11.9 or higher
-- 8GB RAM minimum (16GB recommended for smoother operation)
-- A microphone if you want to use voice input
+- 8GB RAM minimum (16GB recommended)
+- Microphone for voice input
 
 ### Installation
 
@@ -66,96 +82,51 @@ cd vioratalk-mindwave-mate
 # Install dependencies
 poetry install
 
-# Run tests to make sure everything works
-poetry run pytest
-
-# The main application will be available from Phase 2
-poetry run python -m vioratalk  # Coming soon
+# Run the application
+poetry run python -m vioratalk
 ```
 
-### Development Setup
+### Configuration (BYOK - Bring Your Own Key)
 
-If you want to explore the code or run the test suite:
+VioraTalk uses a BYOK model - you provide your own API keys:
 
-```bash
-# Install development dependencies
-poetry install --with dev
+1. **Initial Setup**: The setup wizard will guide you on first launch
+2. **API Keys**: You'll need to obtain your own keys from:
+   - **Gemini**: [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - **Claude**: [Anthropic Console](https://console.anthropic.com/)
+   - **ChatGPT**: [OpenAI Platform](https://platform.openai.com/)
+   - **Ollama**: No key needed (runs locally)
+3. **Cost Control**: You manage your own API usage and costs directly
 
-# Run the test suite
-poetry run pytest --cov=vioratalk
+### Usage
 
-# Check code quality
-poetry run black src/ tests/
-poetry run isort src/ tests/
-poetry run flake8 src/ tests/
-```
-
-### Project Structure
-
-The codebase is organized to be modular and maintainable:
-
-```
-vioratalk-mindwave-mate/
-├── src/vioratalk/          # Main application code
-│   ├── core/              # Core components (Phase 1 ✓)
-│   ├── services/          # Background services
-│   ├── infrastructure/    # System utilities
-│   └── configuration/     # Settings management
-├── tests/                  # Comprehensive test suite
-├── docs/                   # Documentation
-├── messages/              # Translations (ja/en)
-└── user_settings/         # User configuration files
-```
-
-### Development Roadmap
-
-**Completed:**
-- ✅ Phase 0: Project setup (v0.0.1)
-- ✅ Phase 1: Core foundation (v0.1.0)
-
-**In Progress:**
-- 🚧 Phase 2: Dialogue system
-
-**Upcoming:**
-- Phase 3-4: Speech recognition and AI integration
-- Phase 5-6: Conversation management and testing
-- Phase 7-9: Character personalities and memory
-- Phase 10-11: Desktop GUI
-- Phase 12-14: Advanced features and optimization
-
-### API Keys
-
-VioraTalk uses a BYOK (Bring Your Own Key) approach. You'll need to get your own API keys from:
-
-- **Gemini**: [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **Claude**: [Anthropic Console](https://console.anthropic.com/)
-- **ChatGPT**: [OpenAI Platform](https://platform.openai.com/)
-
-Local models through Ollama don't require API keys.
+1. Launch the application
+2. Choose your character
+3. Select your AI model
+4. Hold spacebar to talk (Push-to-Talk)
+5. Release to send your message
 
 ### Available Characters
 
-The free version will include three characters:
-- **Aoi** - Cheerful and energetic
-- **Haru** - Calm and intellectual  
-- **Yui** - Kind and empathetic
-
-Additional characters are planned for the Pro version.
+The free version includes three characters:
+- **Aoi** - Cheerful and energetic assistant
+- **Haru** - Calm and thoughtful companion
+- **Yui** - Kind and supportive friend
 
 ### Contributing
 
-This is primarily a personal learning project, and I'm not currently accepting pull requests. However, I'd love to hear from you! Feel free to:
+This is primarily a personal learning project. While I appreciate interest in contributing:
 
-- ⭐ Star the repository if you find it interesting
-- 💬 Open a discussion if you have ideas or questions
-- 🐛 Report bugs (I'll do my best to fix them)
-- 💡 Suggest features for future consideration
+- ⭐ **Stars** are welcome and encouraging!
+- 💬 **Discussions** for ideas and questions are great
+- 🐛 **Bug reports** help me learn and improve
+- 🔀 **Pull requests** are generally not accepted (I need to understand all code myself)
 
-Since I'm still learning Python, responses might take some time, but I appreciate all feedback.
+Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details.
 
 ### Testing
 
-The project maintains high test coverage:
+The project maintains comprehensive test coverage:
 
 ```bash
 # Run all tests
@@ -165,7 +136,24 @@ poetry run pytest
 poetry run pytest --cov=vioratalk --cov-report=html
 ```
 
-Current metrics: 305 tests, 86.52% coverage
+Current status: 305 tests, 86.52% coverage
+
+### Frequently Asked Questions
+
+**Q: Will the free version always be available?**
+Yes. The core features will always be free and open source. This is a firm commitment.
+
+**Q: Why BYOK (Bring Your Own Key)?**
+This gives you full control over your costs and data. No subscription fees, no surprises.
+
+**Q: When will extended features be available?**
+They're planned for Phase 13+ (late 2025/early 2026), but the timeline may change as I'm learning.
+
+**Q: Can I use this commercially?**
+The free version is for personal use. Commercial use will require a future commercial license.
+
+**Q: Why aren't you accepting PRs?**
+As a learning project, I need to understand every line of code. I appreciate the interest though!
 
 ### License
 
@@ -183,26 +171,52 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ### このプロジェクトについて
 
-VioraTalkは、私がClaude AIの助けを借りながら開発している音声アシスタントプロジェクトです。Pythonはまだ勉強中ですが、実用的なものを作りながら、しっかりとした開発手法を学んでいます。
+VioraTalkは、私がClaude AIの助けを借りながら開発している音声アシスタントプロジェクトです。Pythonはまだ勉強中ですが、実用的なものを作りながら、適切な開発手法を学んでいます。
 
 目指しているのは、自然に話しかけられるデスクトップアシスタント。キャラクターごとに個性があり、過去の会話も覚えていてくれる、そんなアプリケーションです。
+
+### プロジェクトのビジョンとロードマップ
+
+このプロジェクトは透明な開発アプローチを採用しています：
+
+**現在の状況：**
+- Phase 1（基盤実装）完了 ✅
+- Phase 2（対話システム）開発中 🚧
+- 学習しながら公開開発
+
+**開発方針：**
+- **永続的無料提供**：基本機能は永続的に無料でオープンソース
+- **BYOKモデル**：API利用料は自己管理で透明性確保
+- **学習優先**：コード品質は学習とともに向上
+
+**将来の計画：**
+基本機能は常に無料で提供し続けますが、長期的な開発を維持するため、将来的に（Phase 13以降）オプションの拡張機能を計画しています。無料版は常に完全に機能します。
 
 ### 機能
 
 VioraTalkの特徴：
 
-- **Push-to-Talk音声入力** - スペースキーを押している間だけ音声認識
-- **複数のAIモデル対応** - Gemini、Claude、ChatGPT、Ollamaでのローカル実行
-- **個性的なキャラクター** - それぞれ異なる性格と話し方
-- **記憶システム** - 過去の会話を覚えている
+- **音声対話** - スペースキーを押している間だけ音声認識（Push-to-Talk）
+- **複数AI対応** - Gemini、Claude、ChatGPT、Ollama（ローカル）に対応
+- **キャラクターシステム** - それぞれ個性的な性格と話し方
+- **記憶システム** - セッション内での会話を記憶
 - **オフライン動作** - ローカルモデルで完全オフライン動作可能
 - **日英対応** - インターフェースは日本語と英語に対応
 
-### 開発状況
+### 機能の提供範囲
 
-現在、Phase 1（基盤実装）が完了し、Phase 2（対話システム）の開発に入っています。計画的に進めていますが、学習しながらの開発なので、じっくり時間をかけて実装しています。
+| 機能 | 無料版（永続） | 拡張版（将来） |
+|------|--------------|---------------|
+| 基本音声対話 | ✅ 完全提供 | ✅ 完全提供 |
+| GUIアプリケーション | ✅ 完全提供 | ✅ 完全提供 |
+| 基本キャラクター（3体） | ✅ | ✅ |
+| 追加キャラクター | ❌ | ✅ より多様に |
+| 記憶の持続期間 | セッション中 | より長期間 |
+| 感情表現の種類 | 基本的 | より豊かに |
+| 商用利用 | ❌ | ✅ |
+| サポート | コミュニティ | 優先対応 |
 
-Python初心者がAIと一緒に複雑なプロジェクトに挑戦する過程に興味がある方は、ぜひスターやディスカッションにご参加ください。
+**注記**：無料版は常に完全に機能します。拡張機能は制限ではなく、オプションの追加です。
 
 ### 必要環境
 
@@ -221,106 +235,78 @@ cd vioratalk-mindwave-mate
 # 依存関係のインストール
 poetry install
 
-# テストを実行して動作確認
-poetry run pytest
-
-# メインアプリケーション（Phase 2から利用可能）
-poetry run python -m vioratalk  # 開発中
+# アプリケーションの起動
+poetry run python -m vioratalk
 ```
 
-### 開発環境のセットアップ
+### 設定（BYOK - 自分のAPIキーを使用）
 
-コードを確認したり、テストを実行したい場合：
+VioraTalkはBYOKモデルを採用 - APIキーは自分で用意します：
 
-```bash
-# 開発用依存関係をインストール
-poetry install --with dev
+1. **初期設定**：初回起動時にセットアップウィザードが案内
+2. **APIキーの取得**：以下から各自で取得してください：
+   - **Gemini**: [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - **Claude**: [Anthropic Console](https://console.anthropic.com/)
+   - **ChatGPT**: [OpenAI Platform](https://platform.openai.com/)
+   - **Ollama**: 不要（ローカル実行）
+3. **コスト管理**：API利用料は直接管理で透明性確保
 
-# テストスイートの実行
-poetry run pytest --cov=vioratalk
+### 使い方
 
-# コード品質チェック
-poetry run black src/ tests/
-poetry run isort src/ tests/
-poetry run flake8 src/ tests/
-```
-
-### プロジェクト構成
-
-メンテナンスしやすいモジュール構造になっています：
-
-```
-vioratalk-mindwave-mate/
-├── src/vioratalk/          # アプリケーション本体
-│   ├── core/              # コアコンポーネント (Phase 1 ✓)
-│   ├── services/          # バックグラウンドサービス
-│   ├── infrastructure/    # システムユーティリティ
-│   └── configuration/     # 設定管理
-├── tests/                  # テストスイート
-├── docs/                   # ドキュメント
-├── messages/              # 翻訳ファイル (ja/en)
-└── user_settings/         # ユーザー設定
-```
-
-### 開発ロードマップ
-
-**完了:**
-- ✅ Phase 0: プロジェクト準備 (v0.0.1)
-- ✅ Phase 1: 基盤実装 (v0.1.0)
-
-**進行中:**
-- 🚧 Phase 2: 対話システム
-
-**今後の予定:**
-- Phase 3-4: 音声認識とAI統合
-- Phase 5-6: 会話管理とテスト
-- Phase 7-9: キャラクター性格と記憶
-- Phase 10-11: デスクトップGUI
-- Phase 12-14: 拡張機能と最適化
-
-### APIキー
-
-VioraTalkはBYOK（Bring Your Own Key）方式です。各サービスのAPIキーをご自身で取得してください：
-
-- **Gemini**: [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **Claude**: [Anthropic Console](https://console.anthropic.com/)
-- **ChatGPT**: [OpenAI Platform](https://platform.openai.com/)
-
-Ollamaでのローカル実行にはAPIキーは不要です。
+1. アプリケーションを起動
+2. キャラクターを選択
+3. AIモデルを選択
+4. スペースキーを押しながら話す（Push-to-Talk）
+5. 離すとメッセージ送信
 
 ### 利用可能なキャラクター
 
-無料版では3体のキャラクターを提供予定：
-- **あおい** - 明るく元気な性格
-- **はる** - 落ち着いた知的な性格
-- **ゆい** - 優しく共感的な性格
-
-Pro版では追加キャラクターを予定しています。
+無料版には3体のキャラクターが含まれます：
+- **あおい** - 明るく元気なアシスタント
+- **はる** - 落ち着いた思慮深い相棒
+- **ゆい** - 優しくサポートしてくれる友達
 
 ### 貢献について
 
-これは個人の学習プロジェクトのため、現在プルリクエストは受け付けていません。ただし、以下は大歓迎です：
+これは主に個人の学習プロジェクトです。貢献への関心は嬉しいですが：
 
-- ⭐ 興味を持っていただけたらスターをお願いします
-- 💬 アイデアや質問があればディスカッションを開いてください
-- 🐛 バグを見つけたら報告してください（できる限り修正します）
-- 💡 将来的な機能の提案も歓迎です
+- ⭐ **スター**は歓迎です！励みになります
+- 💬 **ディスカッション**でのアイデアや質問は大歓迎
+- 🐛 **バグ報告**は学習と改善に役立ちます
+- 🔀 **プルリクエスト**は基本的に受け付けていません（すべてのコードを自分で理解する必要があるため）
 
-Pythonを勉強中のため返信に時間がかかることもありますが、すべてのフィードバックに感謝しています。
+詳細は[CONTRIBUTING.md](docs/CONTRIBUTING.md)をご覧ください。
 
 ### テスト
 
-高いテストカバレッジを維持しています：
+プロジェクトは包括的なテストカバレッジを維持しています：
 
 ```bash
-# 全テストの実行
+# すべてのテストを実行
 poetry run pytest
 
 # カバレッジレポート付きで実行
 poetry run pytest --cov=vioratalk --cov-report=html
 ```
 
-現在の指標: 305テスト、カバレッジ86.52%
+現在の状況：305個のテスト、カバレッジ86.52%
+
+### よくある質問
+
+**Q: 無料版は永続的に利用できますか？**
+はい。基本機能は永続的に無料でオープンソースです。これは確固たる約束です。
+
+**Q: なぜBYOK（自分のキーを使用）なのですか？**
+コストとデータを完全に自己管理できます。サブスクリプション料金も、予期しない請求もありません。
+
+**Q: 拡張機能はいつ利用可能になりますか？**
+Phase 13以降（2025年後半〜2026年前半）を予定していますが、学習中のため時期は変動する可能性があります。
+
+**Q: 商用利用はできますか？**
+無料版は個人利用向けです。商用利用には将来的に商用ライセンスが必要になります。
+
+**Q: なぜPRを受け付けないのですか？**
+学習プロジェクトとして、すべてのコードを理解する必要があるためです。関心を持っていただけることは嬉しいです！
 
 ### ライセンス
 
@@ -330,16 +316,14 @@ MITライセンス - 詳細は[LICENSE](LICENSE)をご覧ください。
 
 - **GitHub**: [@MizuiroDeep](https://github.com/MizuiroDeep)
 - **Issues**: [バグ報告](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/issues)
-- **Discussions**: [アイデア・質問](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/discussions)
+- **Discussions**: [アイデアと質問](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/discussions)
 
 ---
 
 <div align="center">
 
-Building an AI voice assistant, one step at a time.
+🌟 **Thank you for your interest in VioraTalk!** 🌟
 
-一歩ずつ、AIボイスアシスタントを作っています。
-
-© 2025 VioraTalk Project
+VioraTalkに興味を持っていただきありがとうございます！
 
 </div>
