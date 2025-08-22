@@ -8,6 +8,7 @@ VioraTalkシステム全体を管理するメインエンジンクラス。
 エンジン初期化仕様書 v1.4準拠
 バックグラウンドサービス管理仕様書 v1.3準拠
 自動セットアップガイド v1.2準拠
+インターフェース定義書 v1.34準拠
 
 Copyright (c) 2025 MizuiroDeep
 """
@@ -256,9 +257,10 @@ class VioraTalkEngine(VioraTalkComponent):
 
         各コンポーネントを逆順でクリーンアップする。
         エラーが発生しても他のコンポーネントのクリーンアップは続行。
+        ComponentState仕様書準拠でTERMINATINGを使用。
         """
         logger.info("Starting VioraTalk Engine cleanup")
-        self._state = ComponentState.SHUTDOWN
+        self._state = ComponentState.TERMINATING  # 仕様書準拠
 
         # 逆順でクリーンアップ
         components = [

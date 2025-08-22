@@ -2,7 +2,7 @@
 国際化管理マネージャー
 
 多言語対応のメッセージ管理を行う。
-Phase 1では最小実装として、ハードコードされたメッセージを返す。
+Phase 2実装として、ハードコードされたメッセージを返す。
 
 関連ドキュメント:
     - I18nManager実装ガイド v1.0
@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 from vioratalk.core.base import ComponentState, VioraTalkComponent
 
-# ロガー取得（Phase 1では標準のloggingモジュールを使用）
+# ロガー取得（Phase 2では標準のloggingモジュールを使用）
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +27,7 @@ class I18nManager(VioraTalkComponent):
     """
     国際化管理マネージャー
 
-    Phase 1では最小実装として、ハードコードされたメッセージを提供。
+    Phase 2実装として、ハードコードされたメッセージを提供。
     将来的にはJSONファイルからの読み込みに対応予定。
 
     Attributes:
@@ -44,7 +44,7 @@ class I18nManager(VioraTalkComponent):
         """
         super().__init__()
 
-        # サポート言語の定義（Phase 1では日本語と英語のみ）
+        # サポート言語の定義（Phase 2では日本語と英語のみ）
         self._supported_languages = ["ja", "en"]
 
         # 言語設定（サポートされていない場合は日本語にフォールバック）
@@ -55,15 +55,25 @@ class I18nManager(VioraTalkComponent):
             if language:  # languageが指定されていて、かつサポート外の場合のみ警告
                 logger.warning(f"Unsupported language: {language}, falling back to Japanese")
 
-        # Phase 1: ハードコードされたメッセージ
+        # Phase 2: ハードコードされたメッセージ
         self._messages = self._create_hardcoded_messages()
 
         self._state = ComponentState.READY
         logger.info(f"I18nManager initialized with language: {self.current_language}")
 
+    @property
+    def supported_languages(self) -> List[str]:
+        """
+        サポートされている言語のリストを取得
+
+        Returns:
+            サポート言語のリスト（コピー）
+        """
+        return self._supported_languages.copy()
+
     def _create_hardcoded_messages(self) -> Dict[str, Dict[str, Any]]:
         """
-        Phase 1用のハードコードされたメッセージを作成
+        Phase 2用のハードコードされたメッセージを作成
 
         Returns:
             言語別のメッセージ辞書
@@ -75,35 +85,41 @@ class I18nManager(VioraTalkComponent):
                     "E0002": "設定ファイルの形式が無効です。",
                     "E0100": "コンポーネントの初期化に失敗しました。",
                     "E0101": "依存コンポーネントが見つかりません。",
-                    "E1001": "マイクにアクセスできません。",
-                    "E1002": "音声入力デバイスが見つかりません。",
+                    "E1001": "マイクにアクセスできません。",  # 仕様書準拠
+                    "E1002": "音声入力デバイスが見つかりません。",  # 仕様書準拠
                     "E1101": "ホットワードが設定されていません。",
                     "E2001": "APIへの接続に失敗しました。",
                     "E3001": "TTSエンジンの初期化に失敗しました。",
-                    "E3301": "録音に失敗しました。",
-                    "E4001": "対話マネージャーの初期化に失敗しました。",
-                    "E4201": "キャラクター設定の読み込みに失敗しました。キャラクター名: {character_name}",
-                    "E5001": "ストレージアクセスエラー。",
-                    "E5302": "ディスク容量が不足しています。必要: {required}GB、利用可能: {available}GB",
-                    "unknown": "不明なエラーが発生しました。",
+                    "E4100": "キャラクター設定の読み込みに失敗しました。",
+                    "E4101": "このキャラクターはPro版限定です。",
+                    "E5001": "メモリが不足しています。",
+                    "E7001": "サービスの起動に失敗しました。",
+                    "E8001": "セットアップディレクトリの作成に失敗しました。",
+                    "E9400": "プロンプト生成に失敗しました。",
+                    "unknown": "不明なエラー",
+                },
+                "logs": {
+                    "L0001": "Component initialized successfully.",
+                    "L0002": "Microphone access denied.",  # 仕様書準拠（英語ログ）
+                    "L0003": "API connection established.",
+                    "L0004": "Service started.",
+                    "L0005": "Prompt generated.",
                 },
                 "ui": {
                     "menu": {
                         "settings": "設定",
-                        "file": "ファイル",
                         "help": "ヘルプ",
-                        "character": "キャラクター",
+                        "about": "VioraTalkについて",
+                        "exit": "終了",
                     },
-                    "button": {"ok": "OK", "cancel": "キャンセル", "apply": "適用"},
-                    "buttons": {"start": "開始", "stop": "停止", "cancel": "キャンセル"},
+                    "buttons": {"start": "開始", "stop": "停止", "record": "録音", "play": "再生"},
                     "status": {
                         "ready": "準備完了",
-                        "listening": "聞き取り中...",
-                        "processing": "処理中...",
+                        "recording": "録音中",
+                        "processing": "処理中",
                         "error": "エラー",
                     },
                 },
-                "log": {},  # ログは常に英語
             },
             "en": {
                 "errors": {
@@ -111,49 +127,65 @@ class I18nManager(VioraTalkComponent):
                     "E0002": "Invalid configuration file format.",
                     "E0100": "Component initialization failed.",
                     "E0101": "Dependency component not found.",
-                    "E1001": "Microphone access denied. Device: {device_name}",
-                    "E1002": "Audio input device not found.",
+                    "E1001": "Cannot access microphone.",  # 仕様書準拠
+                    "E1002": "Audio input device not found.",  # 仕様書準拠
                     "E1101": "Hotword not configured.",
-                    "E2001": "API connection failed.",
+                    "E2001": "Failed to connect to API.",
                     "E3001": "TTS engine initialization failed.",
-                    "E3301": "Recording failed.",
-                    "E4001": "Dialogue manager initialization failed.",
-                    "E4201": "Failed to load character settings.",
-                    "E5001": "Storage access error.",
-                    "E5302": "Insufficient disk space. Required: {required}GB, Available: {available}GB",
-                    "unknown": "An unknown error occurred.",
+                    "E4100": "Failed to load character settings.",
+                    "E4101": "This character is Pro edition exclusive.",
+                    "E5001": "Out of memory.",
+                    "E7001": "Failed to start service.",
+                    "E8001": "Failed to create setup directory.",
+                    "E9400": "Failed to generate prompt.",
+                    "unknown": "Unknown error",
+                },
+                "logs": {
+                    "L0001": "Component initialized successfully.",
+                    "L0002": "Microphone access denied.",  # 仕様書準拠
+                    "L0003": "API connection established.",
+                    "L0004": "Service started.",
+                    "L0005": "Prompt generated.",
                 },
                 "ui": {
                     "menu": {
                         "settings": "Settings",
-                        "file": "File",
                         "help": "Help",
-                        "character": "Character",
+                        "about": "About VioraTalk",
+                        "exit": "Exit",
                     },
-                    "button": {"ok": "OK", "cancel": "Cancel", "apply": "Apply"},
-                    "buttons": {"start": "Start", "stop": "Stop", "cancel": "Cancel"},
+                    "buttons": {
+                        "start": "Start",
+                        "stop": "Stop",
+                        "record": "Record",
+                        "play": "Play",
+                    },
                     "status": {
                         "ready": "Ready",
-                        "listening": "Listening...",
-                        "processing": "Processing...",
+                        "recording": "Recording",
+                        "processing": "Processing",
                         "error": "Error",
                     },
                 },
-                "log": {},  # ログは常に英語
             },
         }
 
     async def initialize(self) -> None:
-        """初期化処理（Phase 1では特に何もしない）"""
-        self._state = ComponentState.INITIALIZING
-        # Phase 1では設定ファイルの読み込みはスキップ
-        self._state = ComponentState.READY
-        logger.info("I18nManager initialization complete")
+        """
+        非同期初期化処理
 
-    @property
-    def supported_languages(self) -> List[str]:
-        """サポートされている言語のリストを返す"""
-        return self._supported_languages.copy()
+        Phase 2では特に何もしない（将来的に設定ファイル読み込みなど）
+        """
+        logger.debug("I18nManager async initialization complete")
+
+    async def cleanup(self) -> None:
+        """
+        非同期クリーンアップ処理
+
+        Phase 2では特に何もしない
+        """
+        self._state = ComponentState.TERMINATED
+        logger.info("I18nManager cleanup complete")
 
     def set_language(self, language: str) -> bool:
         """
@@ -190,7 +222,7 @@ class I18nManager(VioraTalkComponent):
         Args:
             error_code: エラーコード（例: "E0001"）
             variables: メッセージに埋め込む変数（辞書形式）
-            character_id: キャラクターID（Phase 1では未使用）
+            character_id: キャラクターID（Phase 2では未使用）
             **kwargs: 追加の変数（variables引数の代替）
 
         Returns:
@@ -200,7 +232,7 @@ class I18nManager(VioraTalkComponent):
         if error_code is None:
             return "Error: None"
 
-        # Phase 1: ハードコードされたメッセージを返す
+        # Phase 2: ハードコードされたメッセージを返す
         messages = self._messages.get(self.current_language, self._messages["ja"])
         error_messages = messages.get("errors", {})
 
@@ -214,7 +246,7 @@ class I18nManager(VioraTalkComponent):
             # エラーコードを末尾に追加
             message = f"{message}({error_code})"
 
-        # 変数の埋め込み（Phase 1では簡易実装）
+        # 変数の埋め込み（Phase 2では簡易実装）
         # variablesとkwargsの両方をサポート
         format_vars = {}
         if variables:
@@ -246,68 +278,67 @@ class I18nManager(VioraTalkComponent):
         if key is None:
             return "None"
 
-        # Phase 1: ハードコードされたメッセージを返す
+        # Phase 2: ハードコードされたメッセージを返す
         messages = self._messages.get(self.current_language, self._messages["ja"])
 
         # ドット記法でネストされたキーをたどる
         keys = key.split(".")
         result = messages
 
-        try:
-            for k in keys:
-                if isinstance(result, dict) and k in result:
-                    result = result[k]
-                else:
-                    # キーが見つからない場合はキーをそのまま返す（[]なし）
-                    return key
-
-            # resultが文字列でない場合
-            if not isinstance(result, str):
+        for k in keys:
+            if isinstance(result, dict) and k in result:
+                result = result[k]
+            else:
+                # キーが見つからない場合
+                logger.debug(f"UI message key not found: {key}")
                 return key
 
-            # 変数の埋め込み
-            format_vars = {}
-            if variables:
-                format_vars.update(variables)
-            if kwargs:
-                format_vars.update(kwargs)
-
-            if format_vars:
-                result = result.format(**format_vars)
-
-            return result
-
-        except Exception as e:
-            logger.debug(f"Error getting UI message for key '{key}': {e}")
+        # 文字列でない場合（辞書など）はキーを返す
+        if not isinstance(result, str):
             return key
 
+        # 変数の埋め込み
+        format_vars = {}
+        if variables:
+            format_vars.update(variables)
+        if kwargs:
+            format_vars.update(kwargs)
+
+        if format_vars:
+            try:
+                result = result.format(**format_vars)
+            except Exception as e:
+                logger.debug(f"Error formatting UI message: {e}")
+
+        return result
+
     def get_log_message(
-        self, code: str, variables: Optional[Dict[str, Any]] = None, **kwargs
+        self, log_code: str, variables: Optional[Dict[str, Any]] = None, **kwargs
     ) -> str:
         """
         ログメッセージを取得（常に英語）
 
         Args:
-            code: ログメッセージコード
+            log_code: ログコード（例: "L0001"）
             variables: メッセージに埋め込む変数
             **kwargs: 追加の変数
 
         Returns:
             フォーマット済みのログメッセージ（英語）
         """
-        # Phase 1: ログメッセージは英語のエラーメッセージを流用
-        en_messages = self._messages.get("en", {})
+        # Noneチェック
+        if log_code is None:
+            return "Log: None"
 
-        # まずログ専用メッセージを探す（Phase 1では空）
-        log_messages = en_messages.get("log", {})
-        if code in log_messages:
-            message = log_messages[code]
-        # エラーメッセージから探す
-        elif code in en_messages.get("errors", {}):
-            message = en_messages["errors"][code]
+        # ログメッセージは常に英語
+        messages = self._messages.get("en", self._messages["ja"])
+        log_messages = messages.get("logs", {})
+
+        if log_code in log_messages:
+            message = log_messages[log_code]
         else:
-            # デフォルトメッセージ（Unknown errorを含める）
-            message = f"Unknown error: {code}"
+            logger.debug(f"Unknown log code: {log_code}")
+            message = f"Log: {log_code}"
 
         # 変数の埋め込み
         format_vars = {}
@@ -319,59 +350,45 @@ class I18nManager(VioraTalkComponent):
         if format_vars:
             try:
                 message = message.format(**format_vars)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Error formatting log message: {e}")
 
         return message
+
+    def get_message(
+        self,
+        key: str,
+        message_type: str = "ui",
+        variables: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> str:
+        """
+        汎用メッセージ取得メソッド
+
+        Args:
+            key: メッセージキー
+            message_type: メッセージタイプ（ui/error/log）
+            variables: メッセージに埋め込む変数
+            **kwargs: 追加の変数
+
+        Returns:
+            フォーマット済みのメッセージ
+        """
+        if message_type == "error":
+            return self.get_error_message(key, variables, **kwargs)
+        elif message_type == "log":
+            return self.get_log_message(key, variables, **kwargs)
+        else:
+            return self.get_ui_message(key, variables, **kwargs)
 
     def load_character_messages(self, character_id: str) -> None:
         """
         キャラクター固有のメッセージを読み込む
 
-        Phase 1ではスタブ実装。Phase 8で本実装予定。
+        Phase 2では何もしない（Phase 7-9で実装予定）
 
         Args:
             character_id: キャラクターID
         """
-        # Phase 1: スタブ実装
-        logger.debug(f"Character messages loading skipped for: {character_id} (Phase 1)")
-        pass
-
-    async def cleanup(self) -> None:
-        """クリーンアップ処理"""
-        self._state = ComponentState.SHUTDOWN
-        logger.info("I18nManager cleanup complete")
-
-
-# Phase 1での利用例
-if __name__ == "__main__":
-    import asyncio
-
-    async def test_i18n():
-        """I18nManagerのテスト"""
-        # 日本語で初期化
-        i18n = I18nManager("ja")
-        await i18n.initialize()
-
-        # エラーメッセージ取得
-        print("=== Japanese Messages ===")
-        print(f"E0001: {i18n.get_error_message('E0001')}")
-        print(f"E1002: {i18n.get_error_message('E1002')}")
-
-        # UIメッセージ取得
-        print(f"Settings: {i18n.get_ui_message('ui.menu.settings')}")
-        print(f"Ready: {i18n.get_ui_message('ui.status.ready')}")
-
-        # 英語に切り替え
-        i18n.set_language("en")
-        print("\n=== English Messages ===")
-        print(f"E0001: {i18n.get_error_message('E0001')}")
-        print(f"E1002: {i18n.get_error_message('E1002')}")
-        print(f"Settings: {i18n.get_ui_message('ui.menu.settings')}")
-
-        # ログメッセージ（常に英語）
-        print(f"\nLog E1002: {i18n.get_log_message('E1002')}")
-
-        await i18n.cleanup()
-
-    asyncio.run(test_i18n())
+        logger.debug(f"load_character_messages called with {character_id} (stub)")
+        # Phase 7-9で実装予定

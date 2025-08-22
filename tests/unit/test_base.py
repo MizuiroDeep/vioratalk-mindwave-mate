@@ -1,8 +1,10 @@
 """VioraTalkComponent基底クラスのテスト
 
 ComponentStateの状態遷移とライフサイクルメソッドの動作を検証。
+インターフェース定義書 v1.34準拠
 テスト戦略ガイドライン v1.7準拠
 テスト実装ガイド v1.3準拠
+開発規約書 v1.12準拠
 """
 
 import asyncio
@@ -52,20 +54,70 @@ class ConcreteTestComponent(VioraTalkComponent):
 @pytest.mark.unit
 @pytest.mark.phase(1)
 class TestComponentState:
-    """ComponentState Enumのテスト"""
+    """ComponentState Enumのテスト（仕様書準拠）"""
 
     def test_state_values(self):
-        """状態値が正しく定義されているか"""
+        """状態値が正しく定義されているか（インターフェース定義書 v1.34準拠）"""
         assert ComponentState.NOT_INITIALIZED.value == "not_initialized"
         assert ComponentState.INITIALIZING.value == "initializing"
         assert ComponentState.READY.value == "ready"
+        assert ComponentState.RUNNING.value == "running"
         assert ComponentState.ERROR.value == "error"
-        assert ComponentState.SHUTDOWN.value == "shutdown"
+        assert ComponentState.TERMINATING.value == "terminating"
         assert ComponentState.TERMINATED.value == "terminated"
 
     def test_state_count(self):
-        """状態の数が6つであることを確認"""
-        assert len(ComponentState) == 6
+        """状態の数が7つであることを確認（仕様書準拠）"""
+        assert len(ComponentState) == 7
+
+    def test_is_operational(self):
+        """is_operational()クラスメソッドのテスト"""
+        # 動作可能な状態
+        assert ComponentState.is_operational(ComponentState.READY) is True
+        assert ComponentState.is_operational(ComponentState.RUNNING) is True
+
+        # 動作不可能な状態
+        assert ComponentState.is_operational(ComponentState.NOT_INITIALIZED) is False
+        assert ComponentState.is_operational(ComponentState.INITIALIZING) is False
+        assert ComponentState.is_operational(ComponentState.ERROR) is False
+        assert ComponentState.is_operational(ComponentState.TERMINATING) is False
+        assert ComponentState.is_operational(ComponentState.TERMINATED) is False
+
+    def test_can_transition_to(self):
+        """can_transition_to()メソッドのテスト"""
+        # NOT_INITIALIZED からの遷移
+        assert ComponentState.NOT_INITIALIZED.can_transition_to(ComponentState.INITIALIZING) is True
+        assert ComponentState.NOT_INITIALIZED.can_transition_to(ComponentState.READY) is False
+
+        # INITIALIZING からの遷移
+        assert ComponentState.INITIALIZING.can_transition_to(ComponentState.READY) is True
+        assert ComponentState.INITIALIZING.can_transition_to(ComponentState.ERROR) is True
+        assert ComponentState.INITIALIZING.can_transition_to(ComponentState.TERMINATED) is False
+
+        # READY からの遷移
+        assert ComponentState.READY.can_transition_to(ComponentState.RUNNING) is True
+        assert ComponentState.READY.can_transition_to(ComponentState.ERROR) is True
+        assert ComponentState.READY.can_transition_to(ComponentState.TERMINATING) is True
+        assert ComponentState.READY.can_transition_to(ComponentState.TERMINATED) is False
+
+        # RUNNING からの遷移
+        assert ComponentState.RUNNING.can_transition_to(ComponentState.READY) is True
+        assert ComponentState.RUNNING.can_transition_to(ComponentState.ERROR) is True
+        assert ComponentState.RUNNING.can_transition_to(ComponentState.TERMINATING) is True
+        assert ComponentState.RUNNING.can_transition_to(ComponentState.TERMINATED) is False
+
+        # ERROR からの遷移
+        assert ComponentState.ERROR.can_transition_to(ComponentState.INITIALIZING) is True
+        assert ComponentState.ERROR.can_transition_to(ComponentState.TERMINATING) is True
+        assert ComponentState.ERROR.can_transition_to(ComponentState.READY) is False
+
+        # TERMINATING からの遷移
+        assert ComponentState.TERMINATING.can_transition_to(ComponentState.TERMINATED) is True
+        assert ComponentState.TERMINATING.can_transition_to(ComponentState.READY) is False
+
+        # TERMINATED からの遷移（どこにも遷移できない）
+        assert ComponentState.TERMINATED.can_transition_to(ComponentState.NOT_INITIALIZED) is False
+        assert ComponentState.TERMINATED.can_transition_to(ComponentState.READY) is False
 
 
 # ============================================================================
@@ -244,7 +296,7 @@ class TestVioraTalkComponent:
 
     @pytest.mark.asyncio
     async def test_state_transitions(self, component):
-        """状態遷移の完全なフロー"""
+        """状態遷移の完全なフロー（仕様書準拠）"""
         # NOT_INITIALIZED -> INITIALIZING -> READY
         assert component.get_state() == ComponentState.NOT_INITIALIZED
 
@@ -256,11 +308,11 @@ class TestVioraTalkComponent:
         await init_task
         assert component.get_state() == ComponentState.READY
 
-        # READY -> SHUTDOWN -> TERMINATED
+        # READY -> TERMINATING -> TERMINATED
         cleanup_task = asyncio.create_task(component.safe_cleanup())
         await asyncio.sleep(0.001)  # 少し待つ
         # クリーンアップ中の状態
-        assert component.get_state() in [ComponentState.SHUTDOWN, ComponentState.TERMINATED]
+        assert component.get_state() in [ComponentState.TERMINATING, ComponentState.TERMINATED]
 
         await cleanup_task
         assert component.get_state() == ComponentState.TERMINATED

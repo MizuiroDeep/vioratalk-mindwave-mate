@@ -1,129 +1,199 @@
-"""
-VioraTalk Configuration Manager
+"""設定管理マネージャー
 
-設定ファイルの読み込み、保存、管理を行うマネージャー。
-YAMLファイルによる設定管理とドット記法でのアクセスを提供。
+YAMLベースの設定ファイル管理とバリデーション機能を提供。
+環境変数や設定ファイルの優先順位を管理し、動的な設定変更をサポート。
 
-Phase 1最小実装として基本的な設定管理機能を実装。
-Phase 2以降で設定の動的リロード、設定プロファイル切り替え、
-設定の暗号化などの高度な機能を追加予定。
-
-Copyright (c) 2025 MizuiroDeep
+設定管理仕様書 v1.3準拠
+インターフェース定義書 v1.34準拠
+開発規約書 v1.12準拠
 """
 
 import copy
 import logging
+import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 
-from vioratalk.configuration.settings import (
-    DEFAULT_CONFIG_PATH,
-    DEFAULT_LANGUAGE,
-    DEFAULT_LLM_ENGINE,
-    DEFAULT_LOG_LEVEL,
-    DEFAULT_STT_ENGINE,
-    DEFAULT_TTS_ENGINE,
-)
 from vioratalk.core.base import ComponentState, VioraTalkComponent
 from vioratalk.core.exceptions import ConfigurationError
 
+# ロガー設定
 logger = logging.getLogger(__name__)
 
 
 class ConfigManager(VioraTalkComponent):
     """設定管理マネージャー
 
-    YAMLファイル形式の設定を管理し、ドット記法でのアクセスを提供。
-    デフォルト設定とユーザー設定のマージ、設定の検証機能を持つ。
+    YAMLベースの設定ファイル管理とバリデーション機能を提供する。
+    設定の階層的な管理と環境変数によるオーバーライドをサポート。
+
+    設定管理仕様書 v1.3準拠：
+    - 設定ファイルの読み込みと保存
+    - 環境変数によるオーバーライド
+    - 設定値のバリデーション
+    - デフォルト値の提供
 
     Attributes:
         config_path: 設定ファイルのパス
-        _config: 現在の設定内容
-        _defaults: デフォルト設定
-
-    NOTE: Phase 1最小実装のため、SHUTDOWN状態を使用。
-          Phase 2でTERMINATING状態と動的リロード機能を追加予定。
+        _config: 現在の設定値
+        _defaults: デフォルト設定値
     """
 
     def __init__(self, config_path: Optional[Path] = None):
-        """ConfigManagerの初期化
+        """初期化
 
         Args:
-            config_path: 設定ファイルのパス（省略時はデフォルト）
+            config_path: 設定ファイルのパス（Noneの場合はデフォルトパス使用）
         """
-        super().__init__()  # VioraTalkComponentは引数を受け取らない
-        self.config_path = config_path or DEFAULT_CONFIG_PATH
+        super().__init__()
+
+        # 設定ファイルパスの決定
+        if config_path is None:
+            # デフォルトパス: settings.pyのDEFAULT_CONFIG_PATH
+            from vioratalk.configuration.settings import DEFAULT_CONFIG_PATH
+
+            config_path = DEFAULT_CONFIG_PATH
+
+        self.config_path = config_path
         self._config: Dict[str, Any] = {}
         self._defaults = self._get_default_config()
-        logger.debug(f"ConfigManager initialized with path: {self.config_path}")
+
+        logger.info(f"ConfigManager initialized with path: {self.config_path}")
 
     async def initialize(self) -> None:
         """非同期初期化処理
 
-        設定ファイルを読み込み、デフォルト値とマージして検証する。
+        設定ファイルを読み込み、環境変数でオーバーライドする。
 
         Raises:
-            ConfigurationError: 設定の読み込みまたは検証に失敗した場合（E0001）
+            ConfigurationError: 設定ファイルの読み込みやバリデーションに失敗
         """
         self._state = ComponentState.INITIALIZING
         logger.info("ConfigManager initialization started")
 
         try:
-            # 設定ファイルの読み込み（同期処理）
+            # 設定ファイルの読み込み（存在しない場合はデフォルト使用）
             self._config = self.load_config(self.config_path)
 
-            # 設定の検証
+            # 環境変数でオーバーライド
+            self._apply_env_overrides()
+
+            # 設定値のバリデーション
             errors = self.validate_config(self._config)
             if errors:
                 logger.warning(f"Configuration validation warnings: {errors}")
-                # Phase 1では警告のみ（エラーにしない）
 
             self._state = ComponentState.READY
             logger.info("ConfigManager initialization completed")
 
-        except Exception as e:
+        except yaml.YAMLError as e:
             self._state = ComponentState.ERROR
-            logger.error(f"ConfigManager initialization failed: {e}")
             raise ConfigurationError(
-                f"ConfigManager initialization failed: {e}",
+                f"Failed to parse YAML config: {e}",
                 config_file=str(self.config_path),
                 error_code="E0001",
             )
+        except Exception as e:
+            self._state = ComponentState.ERROR
+            if isinstance(e, ConfigurationError):
+                raise
+            raise ConfigurationError(
+                f"Configuration initialization failed: {e}", error_code="E0001"
+            )
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """設定値を取得
+
+        ドット記法で階層的なキーを指定可能。
+        例: "llm.engine" → config["llm"]["engine"]
+
+        Args:
+            key: 設定キー（ドット記法対応）
+            default: デフォルト値
+
+        Returns:
+            Any: 設定値またはデフォルト値
+        """
+        keys = key.split(".")
+        value = self._config
+
+        for k in keys:
+            if isinstance(value, dict):
+                value = value.get(k)
+                if value is None:
+                    return default
+            else:
+                return default
+
+        return value
+
+    def set(self, key: str, value: Any) -> None:
+        """設定値を設定
+
+        ドット記法で階層的なキーを指定可能。
+        存在しない階層は自動的に作成される。
+
+        Args:
+            key: 設定キー（ドット記法対応）
+            value: 設定する値
+        """
+        keys = key.split(".")
+        config = self._config
+
+        # 最後のキー以外を処理
+        for k in keys[:-1]:
+            if k not in config:
+                config[k] = {}
+            elif not isinstance(config[k], dict):
+                # 既存の値が辞書でない場合は辞書に置き換え
+                config[k] = {}
+            config = config[k]
+
+        # 最後のキーに値を設定
+        config[keys[-1]] = value
+
+        logger.debug(f"Configuration updated: {key} = {value}")
+
+    def get_all(self) -> Dict[str, Any]:
+        """全設定を取得
+
+        Returns:
+            Dict[str, Any]: 全設定の深いコピー
+        """
+        return copy.deepcopy(self._config)
+
+    def get_config(self) -> Dict[str, Any]:
+        """全設定を取得（互換性のための別名）
+
+        Returns:
+            Dict[str, Any]: 全設定の深いコピー
+        """
+        return self.get_all()
 
     async def cleanup(self) -> None:
-        """リソースのクリーンアップ
+        """クリーンアップ処理
 
-        設定を保存してからクリーンアップする。
-
-        NOTE: Phase 1最小実装のため、SHUTDOWNを使用。
-              Phase 2でTERMINATING → TERMINATEDの遷移に変更予定。
+        設定の保存など、終了時の処理を行う。
         """
+        self._state = ComponentState.TERMINATING
         logger.info("ConfigManager cleanup started")
-        self._state = ComponentState.SHUTDOWN  # Phase 1: SHUTDOWNを使用
 
-        try:
-            # 変更があれば保存（Phase 2以降で実装予定）
-            # 現在は特にクリーンアップ処理なし
-            pass
+        # Phase 1では特に処理なし
+        # Phase 2以降: 変更された設定の自動保存など
 
-        except Exception as e:
-            logger.error(f"Error during ConfigManager cleanup: {e}")
-        finally:
-            self._state = ComponentState.TERMINATED
-            logger.info("ConfigManager cleanup completed")
+        self._state = ComponentState.TERMINATED
+        logger.info("ConfigManager cleanup completed")
 
     def is_available(self) -> bool:
         """利用可能状態の確認
 
         Returns:
-            bool: READY状態の場合True
-
-        NOTE: Phase 1最小実装のため、READYのみチェック。
-              Phase 2でRUNNINGを追加し、is_operational()を使用予定。
+            bool: 利用可能な場合True
         """
-        return self._state == ComponentState.READY  # Phase 1: 直接チェック
+        return self._state in [ComponentState.READY, ComponentState.RUNNING]
 
     def get_status(self) -> Dict[str, Any]:
         """コンポーネントの状態を取得
@@ -131,7 +201,6 @@ class ConfigManager(VioraTalkComponent):
         Returns:
             Dict[str, Any]: 状態情報を含む辞書
         """
-        from datetime import datetime
 
         return {
             "state": self._state,
@@ -182,14 +251,14 @@ class ConfigManager(VioraTalkComponent):
             )
 
     def save_config(self, config: Dict[str, Any], config_path: Path) -> None:
-        """設定を保存
+        """設定をファイルに保存
 
         Args:
             config: 保存する設定
             config_path: 保存先のパス
 
         Raises:
-            ConfigurationError: ファイル保存エラー（E0001）
+            ConfigurationError: ファイル保存エラー（E0003）
         """
         logger.debug(f"Saving config to: {config_path}")
 
@@ -197,7 +266,6 @@ class ConfigManager(VioraTalkComponent):
             # ディレクトリが存在しない場合は作成
             config_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # YAMLファイルとして保存
             with open(config_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(
                     config, f, default_flow_style=False, allow_unicode=True, sort_keys=False
@@ -205,119 +273,91 @@ class ConfigManager(VioraTalkComponent):
 
             logger.info(f"Configuration saved successfully to {config_path}")
 
-        except PermissionError as e:
-            raise ConfigurationError(
-                f"Permission denied when saving config: {e}",
-                config_file=str(config_path),
-                error_code="E0001",
-            )
         except Exception as e:
             raise ConfigurationError(
-                f"Failed to save config file: {e}", config_file=str(config_path), error_code="E0001"
+                f"Failed to save config file: {e}", config_file=str(config_path), error_code="E0003"
             )
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """設定値を取得（ドット記法対応）
-
-        Args:
-            key: 設定キー（例: "llm.model"、"general.language"）
-            default: デフォルト値
-
-        Returns:
-            Any: 設定値（存在しない場合はdefault）
-        """
-        keys = key.split(".")
-        value = self._config
-
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
-
-        return value
-
-    def set(self, key: str, value: Any) -> None:
-        """設定値を更新（ドット記法対応）
-
-        Args:
-            key: 設定キー（例: "llm.model"）
-            value: 設定する値
-        """
-        keys = key.split(".")
-        config = self._config
-
-        # 最後のキーまで辿る（途中のキーが存在しない場合は作成）
-        for k in keys[:-1]:
-            if k not in config:
-                config[k] = {}
-            elif not isinstance(config[k], dict):
-                # 既存の値が辞書でない場合は上書き
-                config[k] = {}
-            config = config[k]
-
-        # 最後のキーに値を設定
-        config[keys[-1]] = value
-
-        logger.debug(f"Configuration updated: {key} = {value}")
-
-    def get_all(self) -> Dict[str, Any]:
-        """すべての設定を取得
-
-        Returns:
-            Dict[str, Any]: 現在の設定全体の深いコピー
-        """
-        return copy.deepcopy(self._config)
-
-    def get_config(self) -> Dict[str, Any]:
-        """現在の設定を取得（互換性のため維持）
-
-        Returns:
-            Dict[str, Any]: 現在の設定のコピー
-        """
-        return self.get_all()
-
     def validate_config(self, config: Dict[str, Any]) -> List[str]:
-        """設定の妥当性を検証
+        """設定値のバリデーション
 
         Args:
             config: 検証する設定
 
         Returns:
-            List[str]: エラーメッセージのリスト（空なら正常）
+            List[str]: エラーメッセージのリスト（空の場合は有効）
         """
         errors = []
 
-        # Phase 1では基本的な検証のみ
-
-        # general セクションの検証
+        # generalセクションの検証
         if "general" not in config:
             errors.append("Missing required section: general")
         else:
-            general = config["general"]
-            if "language" in general:
-                if general["language"] not in ["ja", "en"]:
-                    errors.append(f"Invalid language: {general['language']} (must be 'ja' or 'en')")
+            # 必須フィールドの確認（languageのみ必須）
+            if "language" not in config["general"]:
+                errors.append("Required field missing: general.language")
+            elif config["general"]["language"] not in ["ja", "en"]:
+                errors.append(f"Invalid language code: {config['general']['language']}")
 
-        # STT設定の検証
+        # sttセクションの検証（Phase 1では基本的な検証のみ）
         if "stt" in config:
-            stt = config["stt"]
-            if "device" in stt:
-                if stt["device"] not in ["default", "cuda", "cpu"]:
-                    errors.append(
-                        f"Invalid STT device: {stt['device']} "
-                        f"(must be 'default', 'cuda', or 'cpu')"
-                    )
+            if "device" in config["stt"]:
+                if config["stt"]["device"] not in ["cpu", "cuda"]:
+                    errors.append(f"Invalid STT device: {config['stt']['device']}")
 
-        # LLM設定の検証
+        # llmセクションの検証
         if "llm" in config:
-            llm = config["llm"]
-            if "temperature" in llm:
-                temp = llm["temperature"]
+            if "temperature" in config["llm"]:
+                temp = config["llm"]["temperature"]
                 if not isinstance(temp, (int, float)) or temp < 0 or temp > 2:
-                    errors.append(f"Invalid LLM temperature: {temp} (must be 0.0-2.0)")
+                    errors.append(f"Invalid temperature value: {temp} (must be 0.0-2.0)")
 
         return errors
+
+    def _apply_env_overrides(self) -> None:
+        """環境変数による設定のオーバーライド
+
+        VIORATALK_で始まる環境変数を設定値にマッピング。
+        例: VIORATALK_LLM_ENGINE → config["llm"]["engine"]
+        """
+        for env_key, env_value in os.environ.items():
+            if env_key.startswith("VIORATALK_"):
+                # VIORATALK_を除去してキーを作成
+                config_key = env_key[10:].lower().replace("_", ".")
+
+                # 値の型変換
+                value = self._parse_env_value(env_value)
+
+                # 設定に適用
+                self.set(config_key, value)
+                logger.debug(f"Environment override: {config_key} = {value}")
+
+    def _parse_env_value(self, value: str) -> Any:
+        """環境変数の値を適切な型に変換
+
+        Args:
+            value: 環境変数の文字列値
+
+        Returns:
+            Any: 変換後の値
+        """
+        # ブール値
+        if value.lower() in ["true", "yes", "1"]:
+            return True
+        elif value.lower() in ["false", "no", "0"]:
+            return False
+
+        # 数値
+        try:
+            if "." in value:
+                return float(value)
+            else:
+                return int(value)
+        except ValueError:
+            pass
+
+        # 文字列のまま
+        return value
 
     def _deep_merge(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """辞書を再帰的にマージ
@@ -327,16 +367,14 @@ class ConfigManager(VioraTalkComponent):
             override: 上書きする辞書
 
         Returns:
-            Dict[str, Any]: マージされた辞書
+            Dict[str, Any]: マージ後の辞書
         """
         result = base.copy()
 
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                # 両方が辞書の場合は再帰的にマージ
                 result[key] = self._deep_merge(result[key], value)
             else:
-                # それ以外は上書き
                 result[key] = value
 
         return result
@@ -350,41 +388,49 @@ class ConfigManager(VioraTalkComponent):
         return {
             "general": {
                 "app_name": "VioraTalk",
-                "version": "0.0.1",
-                "language": DEFAULT_LANGUAGE,
-                "theme": "light",
-                "log_level": DEFAULT_LOG_LEVEL,
+                "language": "ja",
+                "log_level": "INFO",
+                "auto_save_interval": 300,
             },
             "stt": {
-                "engine": DEFAULT_STT_ENGINE,
+                "engine": "faster-whisper",
                 "model": "base",
-                "device": "default",
-                "language": DEFAULT_LANGUAGE,
+                "language": "ja",
+                "device": "cpu",
+                "vad_threshold": 0.5,
+                "max_recording_duration": 30,
             },
             "llm": {
-                "provider": DEFAULT_LLM_ENGINE,
-                "model": "llama3",
+                "engine": "gemini",
+                "fallback": "claude",
+                "max_tokens": 2000,
                 "temperature": 0.7,
-                "max_tokens": 2048,
                 "timeout": 30,
+                "retry": {"max_attempts": 3, "initial_delay": 1.0, "backoff_factor": 2.0},
             },
             "tts": {
-                "engine": DEFAULT_TTS_ENGINE,
-                "speaker_id": 1,
+                "engine": "auto",
+                "auto_mode": "speed",
+                "volume": 0.9,
                 "speed": 1.0,
-                "pitch": 0,
-                "volume": 1.0,
+                "pitch": 1.0,
             },
-            "features": {
-                "auto_setup": True,
-                "background_service": False,
-                "limited_mode": False,
-                "voice_activation": False,
+            "memory": {
+                "short_term_hours": 24,
+                "medium_term_hours": 168,
+                "max_memories": {"short_term": 100, "medium_term": 500, "long_term": 10000},
+                "importance_threshold": 0.7,
             },
-            "paths": {
-                "data": "data",
-                "logs": "logs",
-                "models": "models",
-                "cache": "cache",
-            },
+            "features": {"auto_setup": True, "limited_mode": False, "debug_mode": False},
         }
+
+    def __str__(self) -> str:
+        """文字列表現"""
+        return f"ConfigManager(path={self.config_path}, loaded={bool(self._config)})"
+
+    def __repr__(self) -> str:
+        """詳細な文字列表現"""
+        return (
+            f"ConfigManager(config_path={self.config_path}, "
+            f"state={self._state}, sections={list(self._config.keys())})"
+        )
