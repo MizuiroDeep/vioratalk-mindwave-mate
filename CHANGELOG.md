@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-08-22
+
+### Added
+- **DialogueManager Implementation (Phase 2)**
+  - `DialogueManager` with conversation state management
+  - `DialogueConfig` for dialogue settings and configuration
+  - `DialogueTurn` data structure for conversation history
+  - `ConversationContext` for managing dialogue flow
+  - `ConversationState` enum for dialogue states
+  - Integration with `VioraTalkEngine`
+  - `MockCharacterManager` for testing character interactions
+
+### Features
+- **Conversation Management**
+  - Maximum turns configuration (default: 10)
+  - Temperature settings for response variation
+  - Response timeout handling
+  - Conversation history tracking
+  - Character-aware dialogue system preparation
+
+- **Testing Infrastructure**
+  - 433 unit tests (all passing)
+  - 22 integration tests (all passing)
+  - Total: 455 tests with 86.25% coverage
+  - Mock character system for testing
+  - Comprehensive test suite for dialogue components
+
+### Technical Details
+- **Code Quality Improvements**
+  - Applied Black code formatting across all files
+  - Organized imports with isort
+  - Fixed 47 code style issues with ruff
+  - Consistent code style throughout the project
+
+- **Integration**
+  - DialogueManager integrated with VioraTalkEngine
+  - Configuration management through DialogueConfig
+  - Prepared for future CharacterManager integration
+  - Mock implementations for testing
+
+### Fixed
+- Test-implementation inconsistencies resolved (12 issues)
+- Import organization across all modules
+- Code style violations corrected
+- Test fixtures properly initialized
+
+### Infrastructure
+- Enhanced test coverage from 86.52% to 86.25% (stabilized)
+- Added dialogue-specific error handling
+- Implemented conversation state management
+- Prepared foundation for Phase 3 Mock implementations
+
 ## [0.1.0] - 2025-08-20
 
 ### Added
@@ -72,32 +124,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pyproject.toml` with development dependencies
 - Documentation structure
   - `README.md` with bilingual (Japanese/English) project description
-  - `docs/requirements.md` with system requirements
-  - `docs/architecture.md` with high-level architecture overview
   - `docs/CONTRIBUTING.md` with contribution guidelines
-- Internationalization foundation
+  - `docs/requirements.md` with system requirements
+  - `docs/architecture.md` with architecture overview
+- Basic test setup
+  - Simple import tests
+  - Package metadata verification
+- Internationalization structure
   - `messages/ja/errors.yaml` for Japanese error messages
   - `messages/en/errors.yaml` for English error messages
-- Testing foundation
-  - `tests/test_import.py` with basic import tests
+
+### Project Foundation
 - MIT License
+- Python 3.11.9 environment setup
+- Poetry for dependency management
+- Git repository initialization
+- GitHub repository created (private)
 
-### Project Structure
-- Established modular directory structure following VioraTalk specifications
-- Created placeholder directories for future implementation:
-  - `src/vioratalk/` for main application code
-  - `tests/` for test suites
-  - `docs/` for documentation
-  - `scripts/` for utility scripts
-  - `user_settings/` for user configurations
-  - `messages/` for i18n support
-
-### Development Setup
-- Configured Poetry for dependency management
-- Set up development tools (Black, isort, flake8, mypy, pytest, pre-commit)
-- Established Git repository with initial commit
-- Created GitHub private repository for version control
-
-[Unreleased]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/releases/tag/v0.0.1
