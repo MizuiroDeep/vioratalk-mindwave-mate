@@ -5,6 +5,7 @@
 
 エラーハンドリング指針 v1.20準拠
 開発規約書 v1.12準拠
+インターフェース定義書 v1.34準拠
 """
 
 from datetime import datetime
@@ -81,10 +82,10 @@ class ConfigurationError(VioraTalkError):
     """
 
     def __init__(self, message: str, config_file: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E0001"
         super().__init__(message, **kwargs)
-
         if config_file:
             self.details["config_file"] = config_file
 
@@ -92,226 +93,324 @@ class ConfigurationError(VioraTalkError):
 class InitializationError(VioraTalkError):
     """初期化関連エラー (E0100-E0199)
 
-    コンポーネントの初期化、依存関係の解決に関するエラー
+    コンポーネントの初期化、依存関係チェックに関するエラー
     """
 
     def __init__(self, message: str, component: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E0100"
         super().__init__(message, **kwargs)
-
         if component:
             self.details["component"] = component
-
-
-# ============================================================================
-# コンポーネント関連エラー (E1000-E1999)
-# ============================================================================
 
 
 class ComponentError(VioraTalkError):
     """コンポーネント関連エラー (E1000-E1099)
 
-    VioraTalkComponentの状態遷移、ライフサイクルに関するエラー
+    個別コンポーネントの動作エラー
     """
 
     def __init__(self, message: str, state: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E1000"
         super().__init__(message, **kwargs)
-
         if state:
             self.details["state"] = state
 
 
 # ============================================================================
-# 音声認識関連エラー (E1000-E1999) - 将来の実装用
+# 音声認識（STT）関連エラー (E1000-E1999)
 # ============================================================================
 
 
 class STTError(VioraTalkError):
-    """音声認識関連エラー
+    """音声認識関連エラーの基底クラス (E1000-E1999)
 
-    Phase 3-4で実装予定
+    音声認識エンジンのエラー全般
     """
 
     def __init__(self, message: str, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E1000"
         super().__init__(message, **kwargs)
 
 
+class AudioError(STTError):
+    """音声データ関連エラー (E1001-E1099)
+
+    Phase 3で実装
+    音声データの処理、フォーマット、品質に関するエラー
+
+    エラーコード:
+        E1001: マイクアクセスエラー
+        E1002: 音声フォーマットエラー
+        E1003: 音声が小さい
+        E1004: 音声認識タイムアウト
+    """
+
+    def __init__(self, message: str, audio_file: Optional[str] = None, **kwargs):
+        super().__init__(message, **kwargs)
+        if audio_file:
+            self.details["audio_file"] = audio_file
+
+
 # ============================================================================
-# LLM関連エラー (E2000-E2999) - 将来の実装用
+# 言語モデル（LLM）関連エラー (E2000-E2999)
 # ============================================================================
 
 
 class LLMError(VioraTalkError):
-    """LLM関連エラー
+    """言語モデル関連エラーの基底クラス (E2000-E2999)
 
-    Phase 3-4で実装予定
+    LLMエンジンのエラー全般
     """
 
     def __init__(self, message: str, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E2000"
         super().__init__(message, **kwargs)
 
 
+class APIError(LLMError):
+    """API通信関連エラー (E2001-E2099)
+
+    Phase 3で実装
+    APIとの通信、認証、レスポンスに関するエラー
+
+    エラーコード:
+        E2001: API認証エラー
+        E2002: API利用制限
+        E2003: APIタイムアウト
+        E2004: LLMリクエストタイムアウト
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        api_name: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(message, **kwargs)
+        if status_code:
+            self.details["status_code"] = status_code
+        if api_name:
+            self.details["api_name"] = api_name
+
+
+class RateLimitError(APIError):
+    """レート制限エラー (E2002)
+
+    API利用制限に達した場合のエラー
+    """
+
+    def __init__(self, message: str, retry_after: Optional[int] = None, **kwargs):
+        super().__init__(message, error_code="E2002", **kwargs)
+        self.retry_after = retry_after
+        if retry_after:
+            self.details["retry_after"] = retry_after
+
+
 # ============================================================================
-# 音声合成関連エラー (E3000-E3999) - 将来の実装用
+# 音声合成（TTS）関連エラー (E3000-E3999)
 # ============================================================================
 
 
 class TTSError(VioraTalkError):
-    """音声合成関連エラー
+    """音声合成関連エラーの基底クラス (E3000-E3999)
 
-    Phase 4で実装予定
+    TTSエンジンのエラー全般
     """
 
     def __init__(self, message: str, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E3000"
         super().__init__(message, **kwargs)
 
 
+class InvalidVoiceError(TTSError):
+    """無効な音声設定エラー (E3001-E3099)
+
+    Phase 3で実装
+    音声ID、パラメータ、スタイルが無効な場合のエラー
+
+    エラーコード:
+        E3001: 無効な音声ID
+        E3002: 無効な音声パラメータ
+        E3003: 音声スタイル未対応
+    """
+
+    def __init__(self, message: str, voice_id: Optional[str] = None, **kwargs):
+        super().__init__(message, **kwargs)
+        if voice_id:
+            self.details["voice_id"] = voice_id
+
+
 # ============================================================================
-# パーソナライゼーション関連エラー (E4000-E4999) - 将来の実装用
+# パーソナライゼーション関連エラー (E4000-E4999)
 # ============================================================================
 
 
 class CharacterError(VioraTalkError):
-    """キャラクター関連エラー
+    """キャラクター関連エラー (E4000-E4099)
 
-    Phase 7-8で実装予定
+    キャラクターのロード、設定、切り替えに関するエラー
     """
 
     def __init__(self, message: str, character_id: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E4000"
         super().__init__(message, **kwargs)
-
         if character_id:
             self.details["character_id"] = character_id
 
 
 class MemoryError(VioraTalkError):
-    """記憶システム関連エラー
+    """記憶システム関連エラー (E4100-E4199)
 
-    Phase 9で実装予定
+    会話履歴、長期記憶、コンテキストに関するエラー
     """
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, memory_type: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E4100"
         super().__init__(message, **kwargs)
+        if memory_type:
+            self.details["memory_type"] = memory_type
 
 
 class EmotionError(VioraTalkError):
-    """感情分析関連エラー
+    """感情分析関連エラー (E4300-E4399)
 
-    Phase 8-9で実装予定
+    感情認識、分析、応答生成に関するエラー
     """
 
-    def __init__(self, message: str, **kwargs):
+    def __init__(self, message: str, emotion_data: Optional[Dict[str, Any]] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E4300"
         super().__init__(message, **kwargs)
+        if emotion_data:
+            self.details["emotion_data"] = emotion_data
 
 
 # ============================================================================
-# システム関連エラー (E5000-E5999) - 基本実装
+# システム関連エラー (E5000-E5999)
 # ============================================================================
-
-
-class FileSystemError(VioraTalkError):
-    """ファイルシステム関連エラー
-
-    ファイルの読み書き、ディレクトリ操作に関するエラー
-    """
-
-    def __init__(self, message: str, path: Optional[str] = None, **kwargs):
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E5100"
-        super().__init__(message, **kwargs)
-
-        if path:
-            self.details["path"] = path
 
 
 class ResourceError(VioraTalkError):
-    """リソース関連エラー
+    """リソース関連エラー (E5300-E5399)
 
-    メモリ、CPU、ディスク容量などのリソースに関するエラー
+    メモリ、CPU、ディスク容量などのリソースエラー
     """
 
     def __init__(self, message: str, resource_type: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E5300"
         super().__init__(message, **kwargs)
-
         if resource_type:
             self.details["resource_type"] = resource_type
 
 
 class NetworkError(VioraTalkError):
-    """ネットワーク関連エラー
+    """ネットワーク関連エラー (E5200-E5299)
 
-    通信、接続、タイムアウトに関するエラー
+    ネットワーク接続、通信エラー
     """
 
     def __init__(self, message: str, url: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E5200"
         super().__init__(message, **kwargs)
-
         if url:
             self.details["url"] = url
 
 
-class KeyboardError(VioraTalkError):
-    """キーボード入力関連エラー
+class FileSystemError(VioraTalkError):
+    """ファイルシステム関連エラー (E5100-E5199)
 
-    キーボード操作、ショートカットに関するエラー
+    ファイルI/O、ディレクトリ操作に関するエラー
     """
 
-    def __init__(self, message: str, key: Optional[str] = None, **kwargs):
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E5400"
-        super().__init__(message, **kwargs)
+    pass
 
-        if key:
-            self.details["key"] = key
+
+class TimeoutError(VioraTalkError):
+    """タイムアウトエラー (E5400-E5499)
+
+    各種処理のタイムアウト
+    """
+
+    def __init__(self, message: str, timeout_seconds: Optional[float] = None, **kwargs):
+        super().__init__(message, **kwargs)
+        if timeout_seconds:
+            self.details["timeout_seconds"] = timeout_seconds
 
 
 # ============================================================================
-# モデル関連エラー (E5500-E5599) - Phase 1最小実装
+# モデル関連エラー (E2100-E2499, E2400-E2499)
 # ============================================================================
 
 
 class ModelError(VioraTalkError):
-    """モデル関連エラー（Phase 1最小実装）
+    """モデル関連エラーの基底クラス
 
-    ModelDownloadManagerで使用。
-    Phase 1ではスタブ実装のため実際には発生しない。
-    Phase 2以降で派生クラス（DownloadError、ModelLoadError）を追加予定。
+    モデルのロード、管理、選択に関するエラー
+    """
+
+    pass
+
+
+class ModelNotFoundError(ModelError):
+    """モデルが見つからないエラー (E2100, E2400)
+
+    Phase 3で実装
+    指定されたモデルが存在しない場合のエラー
+
+    エラーコード:
+        E2100: LLMモデルが見つからない
+        E2400: モデル選択失敗
+    """
+
+    def __init__(self, message: str, model_name: Optional[str] = None, **kwargs):
+        super().__init__(message, **kwargs)
+        if model_name:
+            self.details["model_name"] = model_name
+
+
+class ModelLoadError(ModelError):
+    """モデルロードエラー (E2101-E2199, E2401-E2499)
+
+    モデルのロード、初期化に失敗した場合のエラー
     """
 
     pass
 
 
 # ============================================================================
-# バックグラウンドサービス関連エラー (E7000-E7999) - 将来の実装用
+# バックグラウンドサービス関連エラー (E7000-E7999)
 # ============================================================================
 
 
 class BackgroundServiceError(VioraTalkError):
-    """バックグラウンドサービス関連エラー
+    """バックグラウンドサービス関連エラーの基底クラス (E7000-E7999)
 
-    Phase 1 Part 2で実装予定
+    Phase 1で実装
+    サービスの起動、停止、管理に関するエラー
     """
 
     def __init__(self, message: str, service_name: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E7000"
         super().__init__(message, **kwargs)
@@ -320,35 +419,43 @@ class BackgroundServiceError(VioraTalkError):
 
 
 class ServiceStartupError(BackgroundServiceError):
-    """サービス起動エラー"""
+    """サービス起動エラー (E7001)
 
-    def __init__(self, message: str, **kwargs):
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E7001"
-        super().__init__(message, **kwargs)
+    サービスの起動に失敗した場合のエラー
+    """
+
+    def __init__(self, message: str, service_name: Optional[str] = None, **kwargs):
+        super().__init__(message, error_code="E7001", **kwargs)
+        if service_name:
+            self.details["service_name"] = service_name
 
 
 class ServiceCommunicationError(BackgroundServiceError):
-    """サービス間通信エラー"""
+    """サービス通信エラー (E7005)
 
-    def __init__(self, message: str, **kwargs):
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E7005"
-        super().__init__(message, **kwargs)
+    サービス間の通信に失敗した場合のエラー
+    """
+
+    def __init__(self, message: str, service_name: Optional[str] = None, **kwargs):
+        super().__init__(message, error_code="E7005", **kwargs)
+        if service_name:
+            self.details["service_name"] = service_name
 
 
 # ============================================================================
-# セットアップ関連エラー (E8000-E8999) - 将来の実装用
+# 自動セットアップ関連エラー (E8000-E8999)
 # ============================================================================
 
 
 class SetupError(VioraTalkError):
-    """セットアップ関連エラー
+    """セットアップ関連エラーの基底クラス (E8000-E8999)
 
-    Phase 2で実装予定
+    Phase 2で実装
+    自動セットアップ、環境構築に関するエラー
     """
 
     def __init__(self, message: str, step: Optional[str] = None, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E8000"
         super().__init__(message, **kwargs)
@@ -357,17 +464,19 @@ class SetupError(VioraTalkError):
 
 
 # ============================================================================
-# 人間らしさ実装関連エラー (E9000-E9999) - 将来の実装用
+# 人間らしさ実装関連エラー (E9000-E9999)
 # ============================================================================
 
 
 class HumanLikeError(VioraTalkError):
-    """人間らしさ実装関連エラー
+    """人間らしさ関連エラーの基底クラス (E9000-E9999)
 
-    Phase 8-9で実装予定
+    Phase 8-9で実装
+    性格理論、感情記憶、会話スタイルに関するエラー
     """
 
     def __init__(self, message: str, **kwargs):
+        # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E9000"
         super().__init__(message, **kwargs)
