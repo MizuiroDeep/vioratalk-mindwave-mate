@@ -16,12 +16,7 @@ import time
 import pytest
 
 # テスト対象のインポート
-from tests.mocks.mock_tts_engine import (
-    MockTTSEngine,
-    SynthesisResult,
-    VoiceInfo,
-    VoiceParameters,
-)
+from tests.mocks.mock_tts_engine import MockTTSEngine, SynthesisResult, VoiceInfo, VoiceParameters
 from vioratalk.core.base import ComponentState
 from vioratalk.core.exceptions import AudioError, InvalidVoiceError, TTSError
 

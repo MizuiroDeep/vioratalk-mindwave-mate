@@ -38,7 +38,7 @@ except ImportError:
 
 # エラークラス
 from vioratalk.core.exceptions import AudioError  # 追加: test_tts_fallback_mechanismで使用
-from vioratalk.core.exceptions import LLMError, STTError
+from vioratalk.core.exceptions import APIError, STTError  # APIErrorを追加
 
 # ============================================================================
 # フィクスチャ
@@ -198,8 +198,10 @@ class TestErrorHandling:
 
         # エラーモードでのテスト
         mock_llm_engine.error_mode = True
-        with pytest.raises(LLMError):
+        # MockLLMEngineはエラーモード時にAPIError（E2001）を投げる
+        with pytest.raises(APIError) as exc_info:
             await mock_llm_engine.generate("エラーテスト")
+        assert exc_info.value.error_code == "E2001"  # APIエラーコードを確認
 
     async def test_tts_fallback_mechanism(self, mock_tts_engine):
         """TTS フォールバック機構テスト"""

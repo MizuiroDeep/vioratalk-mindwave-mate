@@ -1,0 +1,54 @@
+# English UI strings (Phase 4 implementation)
+# Compliant with Project Instructions v2.34 Section 25
+ui:
+  # Main menu (5 items)
+  menu:
+    settings: "Settings"
+    character: "Character Selection"
+    help: "Help"
+    about: "About VioraTalk"
+    exit: "Exit"
+  
+  # Buttons (7 items)
+  buttons:
+    start: "Start"
+    stop: "Stop"
+    save: "Save"
+    cancel: "Cancel"
+    ok: "OK"
+    apply: "Apply"
+    reset: "Reset"
+  
+  # Status display (8 items)
+  status:
+    ready: "Ready"
+    listening: "Listening..."
+    thinking: "Thinking..."
+    speaking: "Speaking..."
+    error: "Error"
+    offline: "Offline"
+    online: "Online"
+    processing: "Processing... {percent}%"
+  
+  # Settings screen (6 items)
+  settings:
+    language: "Language"
+    audio_input: "Audio Input"
+    audio_output: "Audio Output"
+    api_keys: "API Keys"
+    character: "Character Settings"
+    advanced: "Advanced Settings"
+  
+  # Dialog messages (4 items)
+  dialogs:
+    confirm_exit: "Are you sure you want to exit?"
+    save_changes: "Do you want to save changes?"
+    api_key_missing: "API key is not configured. Would you like to open settings?"
+    character_changed: "Character changed to: {character_name}"
+  
+  # Notification messages (4 items)
+  notifications:
+    settings_saved: "Settings saved"
+    character_loaded: "Character '{name}' loaded"
+    error_occurred: "An error occurred: {error}"
+    update_available: "A new version is available"

@@ -10,7 +10,6 @@ Copyright (c) 2025 MizuiroDeep
 from vioratalk.core.base import ComponentState, VioraTalkComponent
 from vioratalk.core.exceptions import (
     BackgroundServiceError,
-    ComponentError,
     ConfigurationError,
     InitializationError,
     ServiceCommunicationError,
@@ -29,7 +28,6 @@ __all__ = [
     "VioraTalkError",
     "ConfigurationError",
     "InitializationError",
-    "ComponentError",
     "BackgroundServiceError",
     "ServiceStartupError",
     "ServiceCommunicationError",

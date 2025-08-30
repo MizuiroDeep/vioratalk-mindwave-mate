@@ -224,9 +224,8 @@ class MockLLMEngine(VioraTalkComponent):
         # エラーモードチェック
         if self.error_mode:
             self.logger.error("Mock LLM error mode is enabled")
-            raise APIError(
-                "Mock API error", error_code="E2001", details={"mode": "error_simulation"}
-            )
+            # APIErrorはdetailsパラメータを受け取らないので削除
+            raise APIError("Mock API error", error_code="E2001")
 
         # 統計更新
         self.total_requests += 1

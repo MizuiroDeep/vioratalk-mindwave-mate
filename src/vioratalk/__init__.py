@@ -8,19 +8,14 @@ Copyright (c) 2025 MizuiroDeep
 License: MIT
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "MizuiroDeep"
 __email__ = "36126374+MizuiroDeep@users.noreply.github.com"
 __license__ = "MIT"
 
 # Phase 1で公開するクラス
 from vioratalk.core.base import ComponentState, VioraTalkComponent
-from vioratalk.core.exceptions import (
-    ComponentError,
-    ConfigurationError,
-    InitializationError,
-    VioraTalkError,
-)
+from vioratalk.core.exceptions import ConfigurationError, InitializationError, VioraTalkError
 from vioratalk.core.i18n_manager import I18nManager
 
 # Phase 1の主要コンポーネント
@@ -40,7 +35,6 @@ __all__ = [
     "VioraTalkError",
     "ConfigurationError",
     "InitializationError",
-    "ComponentError",
     # 主要コンポーネント
     "VioraTalkEngine",
     "I18nManager",

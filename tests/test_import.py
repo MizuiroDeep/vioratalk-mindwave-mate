@@ -5,7 +5,7 @@ def test_import_vioratalk():
     """vioratalkパッケージがインポートできることを確認"""
     import vioratalk
 
-    assert vioratalk.__version__ == "0.0.1"
+    assert vioratalk.__version__ == "0.3.0"
 
 
 def test_author_info():

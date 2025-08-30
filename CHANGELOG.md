@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-08-29
+
+### Added
+- **Real Engine Implementations (Phase 4)**
+  - `FasterWhisperEngine` for local speech-to-text with GPU/CPU auto-selection
+  - `GeminiEngine` for LLM integration with BYOK (Bring Your Own Key) support
+  - `Pyttsx3Engine` for cross-platform text-to-speech synthesis
+  - Comprehensive error handling with retry mechanisms
+  - Engine switching mechanism with fallback support
+
+### Features
+- **Production-Ready Speech Processing**
+  - FasterWhisper integration with automatic model downloading
+  - Support for multiple Whisper model sizes (tiny, base, small, medium, large)
+  - Language auto-detection for 99+ languages
+  - GPU acceleration when CUDA is available
+  
+- **Advanced LLM Integration**
+  - Gemini API integration with streaming support
+  - Conversation history management
+  - Temperature and max_tokens configuration
+  - Automatic retry with exponential backoff
+  
+- **Cross-Platform TTS**
+  - Windows SAPI, macOS NSSpeechSynthesizer, Linux espeak support
+  - Voice selection and rate/volume/pitch control
+  - Iterative synthesis for memory efficiency
+
+### Technical Details
+- **Testing Excellence**
+  - 743 total tests (742 passing, 99.9% success rate)
+  - Test coverage: 78.17% (target 65-70% exceeded)
+  - Individual engine coverage: FasterWhisper 79%, Gemini 84%, Pyttsx3 77%
+  - 8 integration tests with 100% success rate
+  - Comprehensive manual test scripts for real-world validation
+
+- **Code Quality Improvements**
+  - Applied ruff fixes to 89 files (63 issues auto-fixed)
+  - Applied Black formatting to 26 files
+  - Organized imports with isort in 24 files
+  - Maintained code consistency across entire codebase
+
+### Fixed
+- APIError constructor parameter issues in exception handling
+- Mock vs real engine test compatibility issues
+- Pyttsx3 engine reuse problems (engine recreation on each call)
+- Integration test concurrent processing issues
+
+### Changed
+- Updated from mock engines to real production engines
+- Enhanced error handling with specific error codes (E1xxx-E3xxx)
+- Improved test infrastructure for real engine validation
+- Refined engine initialization patterns for better reliability
+
+### Infrastructure
+- Added comprehensive integration tests in tests/integration/
+- Created manual test scripts in scripts/manual_tests/feature/
+- Established BYOK pattern for API key management
+- Prepared foundation for Phase 5 CLI implementation
+
 ## [0.3.0] - 2025-08-23
 
 ### Added
@@ -166,7 +226,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Poetry configuration
 - README with project vision
 
-[Unreleased]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.0.1...v0.1.0

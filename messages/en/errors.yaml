@@ -1,4 +1,7 @@
-# English error messages (Phase 0 minimal)
+# English error messages (Phase 0 minimal + Phase 4 extension)
+# Compliant with Error Handling Guidelines v1.20
+
+# Phase 0 existing structure (preserved)
 errors:
   general:
     unknown: "An unknown error occurred"
@@ -10,3 +13,166 @@ errors:
   
   network:
     connection_failed: "Connection failed"
+
+# Phase 4 error code system additions (37 items)
+# System errors (E0xxx)
+E0001:
+  user: "Configuration file not found."
+  log: "Configuration file not found: {path}"
+
+E0002:
+  user: "Invalid configuration file format."
+  log: "Invalid configuration format: {error}"
+
+E0003:
+  user: "Initialization failed. Please restart the application."
+  log: "Initialization failed: {component}"
+
+E0004:
+  user: "Failed to load required component."
+  log: "Component loading failed: {component_name}"
+
+E0005:
+  user: "Insufficient system resources."
+  log: "Insufficient system resources: {resource_type}"
+
+E0007:
+  user: "Failed to initialize engine: {component}"
+  log: "Engine initialization failed: {component}, error: {error}"
+
+E0100:
+  user: "Failed to initialize component."
+  log: "Component initialization failed: {component}"
+
+# Speech recognition errors (E1xxx)
+E1000:
+  user: "Speech recognition failed."
+  log: "STT processing failed: {error}"
+
+E1001:
+  user: "Cannot access microphone."
+  log: "Microphone access denied: {device}"
+
+E1002:
+  user: "Audio input device not found."
+  log: "Audio input device not found."
+
+E1003:
+  user: "Voice too quiet. Please speak louder."
+  log: "Audio level too low: {level}dB"
+
+E1004:
+  user: "Speech recognition timed out."
+  log: "STT timeout after {seconds} seconds"
+
+# Language model errors (E2xxx)
+E2000:
+  user: "Failed to generate AI response."
+  log: "LLM generation failed: {error}"
+
+E2001:
+  user: "API authentication failed."
+  log: "API authentication failed: {service}"
+
+E2002:
+  user: "API rate limit reached. Please wait."
+  log: "Rate limit exceeded: retry after {retry_after}s"
+
+E2003:
+  user: "API key not configured."
+  log: "API key not configured for {service}"
+
+E2004:
+  user: "Response generation timed out."
+  log: "LLM timeout after {seconds} seconds"
+
+# Model management errors (E2100-E2199) - Common for STT/LLM/TTS
+E2100:
+  user: "Specified model not found: {model_name}"
+  log: "Model not found: {model_name}"
+
+E2101:
+  user: "Failed to load model: {model_name}"
+  log: "Failed to load model: {model_name}, error: {error}"
+
+# Model selection errors (E2400-E2403)
+E2400:
+  user: "Model selection failed."
+  log: "Model selection failed: {reason}"
+
+E2401:
+  user: "Failed to retrieve model information."
+  log: "Failed to get model info: {model_name}"
+
+E2402:
+  user: "Failed to register model."
+  log: "Model registration failed: {model_name}"
+
+E2403:
+  user: "No suitable model found."
+  log: "No suitable model found for task: {task_type}"
+
+# Text-to-speech errors (E3xxx)
+E3000:
+  user: "Speech synthesis failed."
+  log: "TTS synthesis failed: {error}"
+
+E3001:
+  user: "Specified voice not found."
+  log: "Voice not found: {voice_id}"
+
+E3002:
+  user: "Audio output device not found."
+  log: "Audio output device not found."
+
+E3003:
+  user: "Invalid voice parameters."
+  log: "Invalid voice parameters: {params}"
+
+E3004:
+  user: "Failed to initialize speech synthesis engine."
+  log: "TTS engine initialization failed: {engine}"
+
+# File system errors (E5100-E5102)
+E5101:
+  user: "Failed to read file."
+  log: "File read error: {filepath}"
+
+E5102:
+  user: "Failed to write file."
+  log: "File write error: {filepath}"
+
+# Network errors (E5200-E5299, E5502)
+E5200:
+  user: "Network connection error occurred."
+  log: "Network connection error: {url}"
+
+E5201:
+  user: "Network error occurred."
+  log: "Network error: {error}"
+
+E5203:
+  user: "Failed to connect to proxy server."
+  log: "Proxy connection failed: {proxy}"
+
+E5205:
+  user: "Request timed out."
+  log: "Request timeout after {seconds}s"
+
+E5502:
+  user: "Cannot connect to endpoint. Please check network settings."
+  log: "Failed to connect to endpoint: {endpoint}"
+
+# Resource errors (E5300-E5301)
+E5300:
+  user: "Insufficient system resources."
+  log: "Resource exhausted: {resource_type}"
+
+E5301:
+  user: "Out of memory."
+  log: "Out of memory: available={available}MB, required={required}MB"
+
+# Configuration error (E5401)
+E5401:
+  user: "Invalid configuration value."
+  log: "Invalid configuration value: {key}={value}"

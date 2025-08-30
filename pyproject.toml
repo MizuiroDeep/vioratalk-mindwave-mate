@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vioratalk"
-version = "0.3.0"
+version = "0.4.0"
 description = "AI Voice Assistant with Emotional Expression"
 authors = ["MizuiroDeep <36126374+MizuiroDeep@users.noreply.github.com>"]
 license = "MIT"
@@ -13,6 +13,13 @@ apscheduler = "^3.11.0"
 pyyaml = "^6.0.2"
 typing-extensions = "^4.14.1"
 numpy = "^2.3.2"
+faster-whisper = "^1.2.0"
+pyttsx3 = "^2.99"
+aiohttp = "^3.12.15"
+tenacity = "^9.1.2"
+sounddevice = "^0.5.2"
+keyboard = "^0.13.5"
+google-genai = "^1.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -24,6 +31,10 @@ pre-commit = "^3.5.0"
 pytest-asyncio = "0.21.0"
 pytest-cov = "^6.2.1"
 ruff = "^0.12.9"
+aioresponses = "^0.7.8"
+pywin32 = "^311"
+psutil = "^7.0.0"
+pytest-xdist = "^3.8.0"
 
 [build-system]
 requires = ["poetry-core"]

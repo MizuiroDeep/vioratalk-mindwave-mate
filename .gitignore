@@ -42,3 +42,8 @@ data/logs/
 htmlcov/
 .tox/
 .hypothesis/
+
+data/models/
+logs/
+test_output/
+test_report_*.json

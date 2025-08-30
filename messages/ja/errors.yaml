@@ -1,4 +1,7 @@
-# 日本語エラーメッセージ（Phase 0最小構成）
+# 日本語エラーメッセージ（Phase 0最小構成 + Phase 4拡張）
+# エラーハンドリング指針 v1.20準拠
+
+# Phase 0の既存構造（保持）
 errors:
   general:
     unknown: "不明なエラーが発生しました"
@@ -10,3 +13,166 @@ errors:
   
   network:
     connection_failed: "接続に失敗しました"
+
+# Phase 4で追加するエラーコード体系（37個）
+# システムエラー（E0xxx）
+E0001:
+  user: "設定ファイルが見つかりません。"
+  log: "Configuration file not found: {path}"
+
+E0002:
+  user: "設定ファイルの形式が正しくありません。"
+  log: "Invalid configuration format: {error}"
+
+E0003:
+  user: "初期化に失敗しました。アプリケーションを再起動してください。"
+  log: "Initialization failed: {component}"
+
+E0004:
+  user: "必要なコンポーネントの読み込みに失敗しました。"
+  log: "Component loading failed: {component_name}"
+
+E0005:
+  user: "システムリソースが不足しています。"
+  log: "Insufficient system resources: {resource_type}"
+
+E0007:
+  user: "エンジンの初期化に失敗しました: {component}"
+  log: "Engine initialization failed: {component}, error: {error}"
+
+E0100:
+  user: "コンポーネントの初期化に失敗しました。"
+  log: "Component initialization failed: {component}"
+
+# 音声認識エラー（E1xxx）
+E1000:
+  user: "音声認識に失敗しました。"
+  log: "STT processing failed: {error}"
+
+E1001:
+  user: "マイクにアクセスできません。"
+  log: "Microphone access denied: {device}"
+
+E1002:
+  user: "音声入力デバイスが見つかりません。"
+  log: "Audio input device not found."
+
+E1003:
+  user: "音声が小さすぎます。もう少し大きな声でお話しください。"
+  log: "Audio level too low: {level}dB"
+
+E1004:
+  user: "音声認識がタイムアウトしました。"
+  log: "STT timeout after {seconds} seconds"
+
+# 言語モデルエラー（E2xxx）
+E2000:
+  user: "AI応答の生成に失敗しました。"
+  log: "LLM generation failed: {error}"
+
+E2001:
+  user: "API認証に失敗しました。"
+  log: "API authentication failed: {service}"
+
+E2002:
+  user: "API利用制限に達しました。しばらくお待ちください。"
+  log: "Rate limit exceeded: retry after {retry_after}s"
+
+E2003:
+  user: "APIキーが設定されていません。"
+  log: "API key not configured for {service}"
+
+E2004:
+  user: "応答生成がタイムアウトしました。"
+  log: "LLM timeout after {seconds} seconds"
+
+# モデル管理エラー（E2100-E2199）- STT/LLM/TTS共通
+E2100:
+  user: "指定されたモデルが見つかりません: {model_name}"
+  log: "Model not found: {model_name}"
+
+E2101:
+  user: "モデルの読み込みに失敗しました: {model_name}"
+  log: "Failed to load model: {model_name}, error: {error}"
+
+# モデル選択関連（E2400-E2403）
+E2400:
+  user: "モデル選択に失敗しました。"
+  log: "Model selection failed: {reason}"
+
+E2401:
+  user: "モデル情報の取得に失敗しました。"
+  log: "Failed to get model info: {model_name}"
+
+E2402:
+  user: "モデルの登録に失敗しました。"
+  log: "Model registration failed: {model_name}"
+
+E2403:
+  user: "適切なモデルが見つかりません。"
+  log: "No suitable model found for task: {task_type}"
+
+# 音声合成エラー（E3xxx）
+E3000:
+  user: "音声合成に失敗しました。"
+  log: "TTS synthesis failed: {error}"
+
+E3001:
+  user: "指定された音声が見つかりません。"
+  log: "Voice not found: {voice_id}"
+
+E3002:
+  user: "音声出力デバイスが見つかりません。"
+  log: "Audio output device not found."
+
+E3003:
+  user: "音声パラメータが無効です。"
+  log: "Invalid voice parameters: {params}"
+
+E3004:
+  user: "音声合成エンジンの初期化に失敗しました。"
+  log: "TTS engine initialization failed: {engine}"
+
+# ファイルシステム関連（E5100-E5102）
+E5101:
+  user: "ファイルの読み込みに失敗しました。"
+  log: "File read error: {filepath}"
+
+E5102:
+  user: "ファイルの書き込みに失敗しました。"
+  log: "File write error: {filepath}"
+
+# ネットワーク関連（E5200-E5299, E5502）
+E5200:
+  user: "ネットワーク接続エラーが発生しました。"
+  log: "Network connection error: {url}"
+
+E5201:
+  user: "ネットワークエラーが発生しました。"
+  log: "Network error: {error}"
+
+E5203:
+  user: "プロキシサーバーへの接続に失敗しました。"
+  log: "Proxy connection failed: {proxy}"
+
+E5205:
+  user: "リクエストがタイムアウトしました。"
+  log: "Request timeout after {seconds}s"
+
+E5502:
+  user: "エンドポイントに接続できません。ネットワーク設定を確認してください。"
+  log: "Failed to connect to endpoint: {endpoint}"
+
+# リソース関連（E5300-E5301）
+E5300:
+  user: "システムリソースが不足しています。"
+  log: "Resource exhausted: {resource_type}"
+
+E5301:
+  user: "メモリが不足しています。"
+  log: "Out of memory: available={available}MB, required={required}MB"
+
+# 設定エラー（E5401）
+E5401:
+  user: "設定値が不正です。"
+  log: "Invalid configuration value: {key}={value}"

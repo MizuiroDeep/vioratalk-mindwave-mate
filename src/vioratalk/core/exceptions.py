@@ -93,29 +93,18 @@ class ConfigurationError(VioraTalkError):
 class InitializationError(VioraTalkError):
     """初期化関連エラー (E0100-E0199)
 
-    コンポーネントの初期化、依存関係チェックに関するエラー
+    コンポーネントの初期化、依存関係チェック、状態遷移に関するエラー
     """
 
-    def __init__(self, message: str, component: Optional[str] = None, **kwargs):
+    def __init__(
+        self, message: str, component: Optional[str] = None, state: Optional[str] = None, **kwargs
+    ):
         # デフォルトエラーコードを設定
         if "error_code" not in kwargs:
             kwargs["error_code"] = "E0100"
         super().__init__(message, **kwargs)
         if component:
             self.details["component"] = component
-
-
-class ComponentError(VioraTalkError):
-    """コンポーネント関連エラー (E1000-E1099)
-
-    個別コンポーネントの動作エラー
-    """
-
-    def __init__(self, message: str, state: Optional[str] = None, **kwargs):
-        # デフォルトエラーコードを設定
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E1000"
-        super().__init__(message, **kwargs)
         if state:
             self.details["state"] = state
 
@@ -175,31 +164,44 @@ class LLMError(VioraTalkError):
         super().__init__(message, **kwargs)
 
 
-class APIError(LLMError):
-    """API通信関連エラー (E2001-E2099)
+# ============================================================================
+# API通信関連エラー (E2000-E2099) - Phase 4で独立定義
+# ============================================================================
 
-    Phase 3で実装
+
+class APIError(VioraTalkError):
+    """API通信関連エラー (E2000-E2099)
+
+    Phase 4でBaseAPIClient用に実装
     APIとの通信、認証、レスポンスに関するエラー
 
     エラーコード:
-        E2001: API認証エラー
+        E2000: LLM通信失敗
+        E2001: 応答生成失敗
         E2002: API利用制限
-        E2003: APIタイムアウト
-        E2004: LLMリクエストタイムアウト
+        E2003: API認証失敗
     """
 
     def __init__(
         self,
         message: str,
         status_code: Optional[int] = None,
-        api_name: Optional[str] = None,
-        **kwargs,
+        error_code: Optional[str] = None,
+        retry_after: Optional[int] = None,
     ):
-        super().__init__(message, **kwargs)
+        """APIエラーの初期化
+
+        Args:
+            message: エラーメッセージ
+            status_code: HTTPステータスコード
+            error_code: エラーコード
+            retry_after: リトライまでの待機時間（秒）
+        """
+        super().__init__(message, error_code or "E2000")
+        self.status_code = status_code
+        self.retry_after = retry_after
         if status_code:
             self.details["status_code"] = status_code
-        if api_name:
-            self.details["api_name"] = api_name
 
 
 class RateLimitError(APIError):
@@ -208,11 +210,44 @@ class RateLimitError(APIError):
     API利用制限に達した場合のエラー
     """
 
-    def __init__(self, message: str, retry_after: Optional[int] = None, **kwargs):
-        super().__init__(message, error_code="E2002", **kwargs)
-        self.retry_after = retry_after
-        if retry_after:
-            self.details["retry_after"] = retry_after
+    def __init__(self, message: str, retry_after: Optional[int] = None):
+        """レート制限エラーの初期化
+
+        Args:
+            message: エラーメッセージ
+            retry_after: リトライまでの待機時間（秒）
+        """
+        super().__init__(message, status_code=429, error_code="E2002", retry_after=retry_after)
+
+
+class AuthenticationError(APIError):
+    """認証エラー（リトライ不可） (E2003)
+
+    API認証に失敗した場合のエラー
+    """
+
+    def __init__(self, message: str):
+        """認証エラーの初期化
+
+        Args:
+            message: エラーメッセージ
+        """
+        super().__init__(message, status_code=401, error_code="E2003")
+
+
+class InvalidRequestError(APIError):
+    """無効なリクエストエラー（リトライ不可） (E2001)
+
+    リクエストが無効な場合のエラー
+    """
+
+    def __init__(self, message: str):
+        """無効なリクエストエラーの初期化
+
+        Args:
+            message: エラーメッセージ
+        """
+        super().__init__(message, status_code=400, error_code="E2001")
 
 
 # ============================================================================
@@ -325,12 +360,22 @@ class NetworkError(VioraTalkError):
     """ネットワーク関連エラー (E5200-E5299)
 
     ネットワーク接続、通信エラー
+
+    エラーコード:
+        E5201: ネットワーク切断
+        E5203: プロキシ接続失敗
+        E5205: タイムアウト
+        E5502: エンドポイント接続失敗
     """
 
-    def __init__(self, message: str, url: Optional[str] = None, **kwargs):
+    def __init__(
+        self, message: str, error_code: Optional[str] = None, url: Optional[str] = None, **kwargs
+    ):
         # デフォルトエラーコードを設定
-        if "error_code" not in kwargs:
-            kwargs["error_code"] = "E5200"
+        if error_code:
+            kwargs["error_code"] = error_code
+        elif "error_code" not in kwargs:
+            kwargs["error_code"] = "E5201"  # デフォルトはネットワーク切断
         super().__init__(message, **kwargs)
         if url:
             self.details["url"] = url

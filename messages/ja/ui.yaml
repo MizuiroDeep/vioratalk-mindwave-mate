@@ -1,0 +1,54 @@
+# 日本語UI文字列（Phase 4実装）
+# 開発プロジェクト指示-詳細編 v2.34 セクション25準拠
+ui:
+  # メインメニュー（5項目）
+  menu:
+    settings: "設定"
+    character: "キャラクター選択"
+    help: "ヘルプ"
+    about: "VioraTalkについて"
+    exit: "終了"
+  
+  # ボタン（7項目）
+  buttons:
+    start: "開始"
+    stop: "停止"
+    save: "保存"
+    cancel: "キャンセル"
+    ok: "OK"
+    apply: "適用"
+    reset: "リセット"
+  
+  # ステータス表示（8項目）
+  status:
+    ready: "準備完了"
+    listening: "聞き取り中..."
+    thinking: "考え中..."
+    speaking: "話し中..."
+    error: "エラー"
+    offline: "オフライン"
+    online: "オンライン"
+    processing: "処理中... {percent}%"
+  
+  # 設定画面（6項目）
+  settings:
+    language: "言語"
+    audio_input: "音声入力"
+    audio_output: "音声出力"
+    api_keys: "APIキー設定"
+    character: "キャラクター設定"
+    advanced: "詳細設定"
+  
+  # ダイアログメッセージ（4項目）
+  dialogs:
+    confirm_exit: "本当に終了しますか？"
+    save_changes: "変更を保存しますか？"
+    api_key_missing: "APIキーが設定されていません。設定画面を開きますか？"
+    character_changed: "キャラクターを変更しました: {character_name}"
+  
+  # 通知メッセージ（4項目）
+  notifications:
+    settings_saved: "設定を保存しました"
+    character_loaded: "キャラクター「{name}」を読み込みました"
+    error_occurred: "エラーが発生しました: {error}"
+    update_available: "新しいバージョンが利用可能です"

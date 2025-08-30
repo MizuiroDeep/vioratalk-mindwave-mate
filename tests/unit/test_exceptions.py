@@ -20,7 +20,6 @@ from vioratalk.core.exceptions import TTSError  # Phase 1では基底クラス�
 from vioratalk.core.exceptions import (  # LicenseError,  # Phase 7で実装予定（Pro版機能）
     BackgroundServiceError,
     CharacterError,
-    ComponentError,
     ConfigurationError,
     EmotionError,
     HumanLikeError,
@@ -143,31 +142,21 @@ class TestInitializationError:
         error = InitializationError("Init error", component="DialogueManager")
         assert error.details["component"] == "DialogueManager"
 
+    def test_with_state(self):
+        """状態情報の保存（ComponentErrorの機能を統合）"""
+        error = InitializationError("Init error", state="INITIALIZING")
+        assert error.details["state"] == "INITIALIZING"
+
+    def test_with_component_and_state(self):
+        """コンポーネントと状態の両方を保存"""
+        error = InitializationError("Init error", component="DialogueManager", state="ERROR")
+        assert error.details["component"] == "DialogueManager"
+        assert error.details["state"] == "ERROR"
+
     def test_custom_error_code(self):
         """カスタムエラーコードの指定"""
         error = InitializationError("Init error", error_code="E0199")
         assert error.error_code == "E0199"
-
-
-# ============================================================================
-# コンポーネント関連エラーのテスト
-# ============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.phase(1)
-class TestComponentError:
-    """ComponentErrorのテスト"""
-
-    def test_default_error_code(self):
-        """デフォルトエラーコードの確認"""
-        error = ComponentError("Component error")
-        assert error.error_code == "E1000"
-
-    def test_with_component_name(self):
-        """コンポーネント名の保存"""
-        error = ComponentError("Error", state="INITIALIZING")
-        assert error.details["state"] == "INITIALIZING"
 
 
 # ============================================================================
@@ -297,7 +286,7 @@ class TestNetworkError:
     def test_default_error_code(self):
         """デフォルトエラーコードの確認"""
         error = NetworkError("Connection failed")
-        assert error.error_code == "E5200"
+        assert error.error_code == "E5201"  # デフォルトはネットワーク切断
 
     def test_with_url(self):
         """URL情報の保存"""
@@ -426,9 +415,9 @@ class TestErrorCodeSystem:
         init_error = InitializationError("Test")
         assert init_error.error_code.startswith("E01")
 
-        # E1000-E1099: コンポーネントエラー
-        component_error = ComponentError("Test")
-        assert component_error.error_code == "E1000"
+        # E1000-E1999: STTエラー（STTErrorが使用）
+        stt_error = STTError("Test")
+        assert stt_error.error_code == "E1000"
 
         # E4201: ライセンスエラー（Phase 7で実装予定）
         # license_error = LicenseError("Test")
@@ -463,5 +452,7 @@ class TestErrorCodeSystem:
         error = InitializationError("Test", error_code="E0150")
         assert error.error_code == "E0150"
 
-        error = ComponentError("Test", error_code="E1050")
-        assert error.error_code == "E1050"
+        # InitializationErrorがstate引数を持つことを確認
+        error = InitializationError("Test", state="ERROR", error_code="E0150")
+        assert error.error_code == "E0150"
+        assert error.details["state"] == "ERROR"
