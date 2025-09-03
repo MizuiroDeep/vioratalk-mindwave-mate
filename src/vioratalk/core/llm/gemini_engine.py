@@ -1,8 +1,9 @@
-"""gemini_engine.py - Gemini APIを使用したLLMエンジン（新SDK対応）
+"""gemini_engine.py - Gemini APIを使用したLLMエンジン（新SDK・検索機能対応）
 
 Google Gemini APIを使用した大規模言語モデルエンジンの実装。
 BYOK（Bring Your Own Key）対応。
 google-genai SDK使用（2025年8月版）。
+Google検索機能対応（Phase 4 Part 84追加、Part 87修正）。
 
 インターフェース定義書 v1.34準拠
 API通信実装ガイド v1.4準拠
@@ -14,11 +15,13 @@ Phase 4実装範囲：
 - generate/stream_generate実装
 - APIキー管理（credential_manager連携）
 - エラーハンドリング
+- Google検索機能（google_search）
 """
 
 # 標準ライブラリ
 import asyncio
 import logging
+import os
 from datetime import datetime
 from typing import Any, AsyncGenerator, List, Optional
 
@@ -95,10 +98,12 @@ GEMINI_STREAMING_TIMEOUT = 300.0  # ストリーミング用
 
 
 class GeminiEngine(BaseLLMEngine):
-    """Gemini APIを使用したLLMエンジン（新SDK対応）
+    """Gemini APIを使用したLLMエンジン（新SDK・検索機能対応）
 
     Google Gemini APIとの通信を管理し、テキスト生成機能を提供。
     BYOK（Bring Your Own Key）対応で、APIキーは外部から設定可能。
+    Phase 4 Part 84: Google検索機能（google_search）対応。
+    Phase 4 Part 87: 検索ツール形式を新SDK仕様に修正。
 
     Attributes:
         config: LLMエンジン設定
@@ -130,6 +135,18 @@ class GeminiEngine(BaseLLMEngine):
         # 設定の初期化
         config = config or LLMConfig(engine="gemini", model=DEFAULT_MODEL)
 
+        # 環境変数から検索設定を読み込み（Phase 4 Part 84追加、Part 87修正）
+        if os.getenv("GEMINI_ENABLE_SEARCH"):
+            config.enable_search = os.getenv("GEMINI_ENABLE_SEARCH").lower() == "true"
+        if os.getenv("GEMINI_SEARCH_THRESHOLD"):
+            try:
+                config.search_threshold = float(os.getenv("GEMINI_SEARCH_THRESHOLD"))
+            except ValueError:
+                logger.warning(
+                    f"Invalid GEMINI_SEARCH_THRESHOLD value: {os.getenv('GEMINI_SEARCH_THRESHOLD')}, "
+                    f"using default: {config.search_threshold}"
+                )
+
         # 基底クラスの初期化
         super().__init__(config)
 
@@ -153,7 +170,9 @@ class GeminiEngine(BaseLLMEngine):
         if self.api_key:
             self._initialize_client()
 
-        logger.info(f"GeminiEngine initialized with model: {self.current_model}")
+        logger.info(
+            f"GeminiEngine initialized with model: {self.current_model}, search: {config.enable_search}"
+        )
 
     def _initialize_client(self) -> None:
         """Geminiクライアントの初期化（新SDK）"""
@@ -206,11 +225,7 @@ class GeminiEngine(BaseLLMEngine):
             raise AuthenticationError(error_msg)
 
     async def _test_connection(self) -> None:
-        """接続テスト（新SDK対応）
-
-        非同期処理実装ガイド v1.1準拠：
-        CPUバウンドタスクを別スレッドで実行するパターン
-        """
+        """接続テスト（新SDK対応）"""
         try:
             # 新SDK: 設定オブジェクトを使用
             config = types.GenerateContentConfig(
@@ -251,7 +266,11 @@ class GeminiEngine(BaseLLMEngine):
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
     ) -> LLMResponse:
-        """テキスト生成（新SDK対応）
+        """テキスト生成（検索機能対応）
+
+        Phase 4 Part 84: config.enable_searchがTrueの場合、
+        Google検索を有効にして生成。
+        Phase 4 Part 87: 検索ツール形式を新SDK仕様に修正。
 
         Args:
             prompt: ユーザープロンプト
@@ -260,7 +279,7 @@ class GeminiEngine(BaseLLMEngine):
             max_tokens: 最大生成トークン数
 
         Returns:
-            LLMResponse: 生成結果
+            LLMResponse: 生成結果（検索結果含む）
 
         Raises:
             LLMError: 生成処理エラー（E2000）
@@ -286,12 +305,22 @@ class GeminiEngine(BaseLLMEngine):
             # プロンプトの結合
             full_prompt = self._combine_prompts(prompt, system_prompt)
 
+            # 検索ツールの設定（Phase 4 Part 87修正）
+            tools = None
+            if self.config.enable_search:
+                tools = self._create_search_tools()
+                if tools:
+                    logger.info(f"Search enabled with threshold: {self.config.search_threshold}")
+                else:
+                    logger.warning("Search requested but not available for this model")
+
             # 新SDK: GenerateContentConfig使用
             generation_config = types.GenerateContentConfig(
                 system_instruction=system_prompt if system_prompt else None,
                 temperature=temperature,
                 max_output_tokens=max_tokens or self.config.max_tokens,
                 candidate_count=1,
+                tools=tools,  # 検索ツール設定を追加
             )
 
             # 同期処理用の内部関数
@@ -302,15 +331,124 @@ class GeminiEngine(BaseLLMEngine):
                 )
 
             # API呼び出し（同期処理を非同期で実行）
-            logger.debug(f"Generating with model {self.current_model}")
+            logger.debug(
+                f"Generating with model {self.current_model}, search: {self.config.enable_search}"
+            )
             response = await asyncio.get_event_loop().run_in_executor(None, generate_sync)
 
-            # レスポンスの処理
-            return self._process_response(response, request)
+            # レスポンスの処理（検索有効時は検索結果含む、Part 87修正）
+            if self.config.enable_search and tools:
+                # 検索機能が有効でツールが設定されている場合のみ
+                return self._process_response_with_search(response, request)
+            else:
+                # 通常のレスポンス処理
+                return self._process_response(response, request)
 
         except Exception as e:
             # エラーハンドリング
             self._handle_generation_error(e, request)
+
+    def _create_search_tools(self) -> Optional[List]:
+        """検索ツール設定の作成（Phase 4 Part 87修正）
+
+        新SDK（google-genai）の仕様に準拠したツール形式を返す。
+
+        Returns:
+            検索ツール設定のリスト、またはNone（サポートされない場合）
+        """
+        # typesが利用可能か確認
+        if not types:
+            logger.error("google.genai.types not available")
+            return None
+
+        # Gemini 2.0/2.5系の場合（pro、flash、flash-lite全て含む）
+        if self.current_model.startswith(("gemini-2.0", "gemini-2.5")):
+            try:
+                # 新SDK: types.Tool形式でGoogleSearchオブジェクトを作成
+                logger.debug("Creating GoogleSearch tool for Gemini 2.0/2.5")
+                return [types.Tool(google_search=types.GoogleSearch())]
+            except Exception as e:
+                logger.error(f"Failed to create GoogleSearch tool: {e}")
+                return None
+
+        # Gemini 1.5系の場合（2025年9月廃止予定）
+        elif self.current_model.startswith("gemini-1.5"):
+            logger.warning(
+                "Gemini 1.5 models are deprecated (EOL September 2025). "
+                "Consider upgrading to Gemini 2.0/2.5 models for better search support."
+            )
+            # 1.5系は新SDKでのGoogle検索サポートが限定的
+            # 検索を無効化して警告を出す
+            logger.warning("Google Search is not fully supported for Gemini 1.5 with new SDK")
+            return None
+
+        # その他のモデル
+        logger.warning(f"Model {self.current_model} does not support Google Search")
+        return None
+
+    def _process_response_with_search(self, response: Any, request: LLMRequest) -> LLMResponse:
+        """検索結果を含むレスポンスの処理（Phase 4 Part 84追加、Part 87修正）
+
+        Args:
+            response: Gemini APIレスポンス
+            request: 元のリクエスト
+
+        Returns:
+            LLMResponse: 処理済みレスポンス（検索メタデータ含む）
+        """
+        # 基本的なレスポンス処理
+        llm_response = self._process_response(response, request)
+
+        # grounding metadataの処理
+        if hasattr(response, "grounding_metadata") and response.grounding_metadata:
+            grounding_data = response.grounding_metadata
+
+            # 検索クエリの抽出
+            search_queries = []
+            if hasattr(grounding_data, "web_search_queries") and grounding_data.web_search_queries:
+                search_queries = [str(query) for query in grounding_data.web_search_queries]
+                logger.debug(f"Search queries used: {search_queries}")
+
+            # Webソースの抽出
+            sources = []
+            if hasattr(grounding_data, "grounding_chunks") and grounding_data.grounding_chunks:
+                for chunk in grounding_data.grounding_chunks:
+                    source_info = {
+                        "uri": getattr(chunk, "uri", ""),
+                        "title": getattr(chunk, "title", ""),
+                    }
+                    sources.append(source_info)
+                logger.debug(f"Found {len(sources)} sources")
+
+            # 実際に検索が行われたかを判定（Part 87修正）
+            if search_queries or sources:
+                # 検索クエリまたはソースが存在する場合のみsearch_performed=True
+                llm_response.metadata["grounding"] = {
+                    "search_performed": True,
+                    "search_queries": search_queries,
+                    "sources": sources,
+                    "source_count": len(sources),
+                }
+
+                logger.info(
+                    f"Search performed: {len(search_queries)} queries, {len(sources)} sources found"
+                )
+            else:
+                # grounding_metadataは存在するが中身が空
+                logger.debug("Grounding metadata exists but no search results")
+                llm_response.metadata["grounding"] = {
+                    "search_performed": False,
+                    "reason": "No search results found",
+                }
+        elif self.config.enable_search:
+            # 検索が有効だったが結果がない場合
+            logger.debug("Search was enabled but no grounding metadata in response")
+            llm_response.metadata["grounding"] = {
+                "search_performed": False,
+                "reason": "Model determined search was not necessary",
+            }
+
+        return llm_response
 
     async def stream_generate(
         self,
@@ -320,6 +458,8 @@ class GeminiEngine(BaseLLMEngine):
         max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[str, None]:
         """ストリーミング生成（新SDK対応）
+
+        Note: 検索機能はストリーミングモードでは使用不可
 
         Args:
             prompt: ユーザープロンプト
@@ -344,12 +484,14 @@ class GeminiEngine(BaseLLMEngine):
             # プロンプトの結合
             full_prompt = self._combine_prompts(prompt, system_prompt)
 
-            # 新SDK: GenerateContentConfig使用
+            # 新SDK: GenerateContentConfig使用（検索機能は無効）
             generation_config = types.GenerateContentConfig(
                 system_instruction=system_prompt if system_prompt else None,
                 temperature=temperature,
                 max_output_tokens=max_tokens or self.config.max_tokens,
                 candidate_count=1,
+                # ストリーミングでは検索機能を使用しない
+                tools=None,
             )
 
             # ストリーミング生成
@@ -523,29 +665,43 @@ class GeminiEngine(BaseLLMEngine):
             )
 
     def _handle_generation_error(self, error: Exception, request: LLMRequest) -> None:
-        """エラーハンドリング（新SDK対応）
+        """エラーハンドリング（新SDK対応、Part 87改善）
 
         Args:
             error: エラー
             request: 元のリクエスト
 
         Raises:
+            ConfigurationError: バリデーションエラー（E2012）
             RateLimitError: レート制限
             AuthenticationError: 認証エラー
+            ModelNotFoundError: モデル未対応
             APIError: その他のAPIエラー
             LLMError: その他のLLMエラー
         """
         error_msg = str(error)
 
-        # エラーメッセージの解析
-        if "quota" in error_msg.lower() or "rate" in error_msg.lower() or "429" in error_msg:
+        # バリデーションエラーの判定（Part 87修正）
+        if ("validation" in error_msg.lower() and "tools" in error_msg.lower()) or (
+            "invalid value" in error_msg.lower() and "tools" in error_msg.lower()
+        ):
+            logger.error(f"[E2012] Tool validation error: {error_msg}")
+            raise ConfigurationError(
+                f"Invalid tool configuration: {error_msg}",
+                error_code="E2012",
+                details={"model": self.current_model, "search_enabled": self.config.enable_search},
+            )
+        # レート制限の判定
+        elif "quota" in error_msg.lower() or "rate" in error_msg.lower() or "429" in error_msg:
             logger.warning(f"[E2002] Rate limit exceeded: {error_msg}")
             raise RateLimitError(
                 "API rate limit exceeded. Please try again later.", retry_after=60  # デフォルト60秒
             )
+        # 認証エラーの判定
         elif "api_key" in error_msg.lower() or "auth" in error_msg.lower() or "401" in error_msg:
             logger.error(f"[E2003] Authentication failed: {error_msg}")
             raise AuthenticationError("Invalid or missing API key")
+        # モデル未対応エラーの判定
         elif "404" in error_msg and "model" in error_msg.lower():
             logger.error(f"[E2004] Model not found: {error_msg}")
             raise ModelNotFoundError(

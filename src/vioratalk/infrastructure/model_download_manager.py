@@ -63,7 +63,7 @@ WHISPER_MODELS = {
         "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.txt"],
     },
     "large": {  # v1
-        "repo_id": "Systran/faster-whisper-large",
+        "repo_id": "Systran/faster-whisper-large-v1",
         "size_mb": 1550,
         "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.txt"],
     },

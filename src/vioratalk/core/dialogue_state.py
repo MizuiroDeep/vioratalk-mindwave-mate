@@ -2,6 +2,7 @@
 
 DialogueTurnデータクラスを定義し、対話の1ターンを表現する。
 Phase 2の対話システム構築で使用。
+Phase 4拡張: audio_responseフィールド追加（音声入出力対応）
 
 インターフェース定義書 v1.34準拠
 データフォーマット仕様書 v1.5準拠
@@ -19,6 +20,7 @@ class DialogueTurn:
 
     ユーザー入力とアシスタント応答のペアを保持。
     Phase 2以降の対話管理で使用。
+    Phase 4拡張: 音声応答データ（audio_response）を追加。
 
     インターフェース定義書 v1.34 セクション2.4準拠
 
@@ -31,6 +33,7 @@ class DialogueTurn:
         emotion: 応答時の感情（オプション）
         confidence: 応答の確信度（0.0-1.0、オプション）
         processing_time: 処理時間（秒、オプション）
+        audio_response: 音声応答データ（Phase 4追加、オプション）
         metadata: 追加のメタデータ（オプション）
 
     Example:
@@ -42,7 +45,8 @@ class DialogueTurn:
         ...     turn_number=1,
         ...     character_id="001_aoi",
         ...     emotion="happy",
-        ...     confidence=0.95
+        ...     confidence=0.95,
+        ...     audio_response=b"audio_data"  # Phase 4
         ... )
         >>> data = turn.to_dict()
         >>> print(data["turn_number"])
@@ -56,10 +60,15 @@ class DialogueTurn:
     turn_number: int
     character_id: str
 
-    # オプションフィールド
+    # オプションフィールド（Phase 2）
     emotion: Optional[str] = None
     confidence: Optional[float] = None
     processing_time: Optional[float] = None
+
+    # Phase 4追加フィールド
+    audio_response: Optional[bytes] = None  # 音声応答データ
+
+    # メタデータ
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -93,6 +102,7 @@ class DialogueTurn:
 
         ログ出力やAPI通信用に辞書形式に変換する。
         timestampはISO形式の文字列に変換される。
+        audio_responseはPhase 4で追加されたフィールド。
 
         Returns:
             Dict[str, Any]: DialogueTurnの全フィールドを含む辞書
@@ -112,6 +122,7 @@ class DialogueTurn:
             "emotion": self.emotion,
             "confidence": self.confidence,
             "processing_time": self.processing_time,
+            "audio_response": self.audio_response,  # Phase 4追加
             "metadata": self.metadata,
         }
 
@@ -120,6 +131,7 @@ class DialogueTurn:
         """辞書形式から生成
 
         to_dict()で出力した辞書からDialogueTurnインスタンスを復元する。
+        Phase 4でaudio_responseフィールドに対応。
 
         Args:
             data: DialogueTurnの辞書表現
@@ -150,6 +162,7 @@ class DialogueTurn:
             emotion=data.get("emotion"),
             confidence=data.get("confidence"),
             processing_time=data.get("processing_time"),
+            audio_response=data.get("audio_response"),  # Phase 4追加
             metadata=data.get("metadata", {}),
         )
 
@@ -157,6 +170,7 @@ class DialogueTurn:
         """ターンの概要を取得
 
         ログ出力用の簡潔な文字列表現を返す。
+        音声データの有無もPhase 4で追加表示。
 
         Returns:
             str: ターンの概要文字列
@@ -164,7 +178,7 @@ class DialogueTurn:
         Example:
             >>> turn = DialogueTurn(...)
             >>> print(turn.get_summary())
-            Turn #1 [001_aoi]: "こんにちは" -> "こんにちは！今日は..."
+            Turn #1 [001_aoi]: "こんにちは" -> "こんにちは！今日は..." [audio:yes]
         """
         # 長いテキストは省略
         user_preview = (
@@ -176,9 +190,12 @@ class DialogueTurn:
             else self.assistant_response
         )
 
+        # Phase 4: 音声データの有無を表示
+        audio_status = " [audio:yes]" if self.audio_response else ""
+
         return (
             f"Turn #{self.turn_number} [{self.character_id}]: "
-            f'"{user_preview}" -> "{response_preview}"'
+            f'"{user_preview}" -> "{response_preview}"{audio_status}'
         )
 
     def __str__(self) -> str:
@@ -192,13 +209,18 @@ class DialogueTurn:
     def __repr__(self) -> str:
         """開発用詳細文字列表現
 
+        音声データは大きいため、有無のみ表示。
+
         Returns:
             str: デバッグ用の詳細情報
         """
+        audio_info = ", has_audio=True" if self.audio_response else ""
+
         return (
             f"DialogueTurn(turn_number={self.turn_number}, "
             f"character_id='{self.character_id}', "
             f"timestamp={self.timestamp.isoformat()}, "
             f"emotion={self.emotion}, "
-            f"confidence={self.confidence})"
+            f"confidence={self.confidence}"
+            f"{audio_info})"
         )

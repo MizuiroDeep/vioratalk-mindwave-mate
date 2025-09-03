@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-09-03
+
+### Added
+- **DialogueManager Integration (Phase 4 Extension)**
+  - Complete STT/LLM/TTS integration for end-to-end audio dialogue
+  - Audio-based conversation flow from microphone to speaker
+  - Real-time dialogue processing with audio response support
+  - Manual test script for v0.5.0 integration testing
+
+- **Audio Processing Components**
+  - `AudioCapture` for microphone device management
+  - Automatic Gain Control (AGC) for volume normalization
+  - Basic noise reduction capabilities
+  - Support for both sounddevice and pyaudio backends
+  - Multi-channel recording support (mono/stereo)
+
+- **Voice Activity Detection (VAD)**
+  - Real-time speech detection with adaptive thresholds
+  - Three detection modes: AGGRESSIVE, NORMAL, CONSERVATIVE
+  - Speech segment extraction for efficient processing
+  - Background noise learning and adaptation
+  - Silence detection with configurable duration
+
+- **Manager Layer Implementation**
+  - `LLMManager` for multiple LLM engine orchestration
+  - `TTSManager` for multiple TTS engine management
+  - Automatic fallback mechanism for engine failures
+  - Priority-based engine selection
+  - Statistics tracking for performance monitoring
+
+- **Gemini Search Enhancement**
+  - Google Search Grounding integration ($35/1000 queries)
+  - Dynamic Retrieval with 0.7 threshold
+  - Environment variable control (GOOGLE_SEARCH_ENABLE)
+  - Disabled by default to prevent unexpected charges
+
+### Changed
+- **LLMResponse Interface Refactoring**
+  - Renamed field from `text` to `content` for consistency
+  - Updated all references across 4 test files
+  - Aligned with base.py specification
+
+- **DialogueTurn Enhancement**
+  - Added `audio_response` field for TTS output
+  - Extended data structure for Phase 4 audio support
+
+- **Code Quality Improvements**
+  - Applied Black formatting to 19 files
+  - Organized imports with isort in 10 files
+  - Fixed 61 issues with ruff auto-fix
+  - Maintained consistent code style across project
+
+### Fixed
+- VAD initialization synchronization issues
+- LLMResponse interface inconsistencies across tests
+- AudioCapture state transition errors in tests
+- Multi-channel audio processing in noise reduction
+- Test mock object completeness for sounddevice
+
+### Technical Details
+- **Testing Excellence**
+  - 894 total tests (152 new tests added)
+  - Test coverage: 82.21% (improved from 78.17%)
+  - Success rate: 99.8% maintained
+  - Comprehensive manual test suite for dialogue integration
+  - AudioCapture/VAD integration tests added
+
+- **Performance Metrics**
+  - Average dialogue response time: < 2 seconds
+  - VAD processing latency: < 50ms
+  - Audio capture buffer: 1024-2048 samples
+  - Supported sample rates: 16000, 44100, 48000 Hz
+
+- **Implementation Statistics**
+  - New components: 5 (AudioCapture, VAD, LLMManager, TTSManager, Integration)
+  - Files modified: 29 (code formatting)
+  - Lines added: ~3500 (excluding formatting)
+  - Integration complexity: High (multi-component coordination)
+
 ## [0.4.0] - 2025-08-29
 
 ### Added
@@ -226,7 +305,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Poetry configuration
 - README with project vision
 
-[Unreleased]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/MizuiroDeep/vioratalk-mindwave-mate/compare/v0.1.0...v0.2.0

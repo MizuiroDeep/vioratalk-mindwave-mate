@@ -2,6 +2,7 @@
 
 DialogueManagerのすべての機能を網羅的にテストします。
 Phase 2の中核コンポーネントの品質を保証します。
+Phase 4拡張: process_audio_input()の実装テスト追加
 
 テスト実装ガイド v1.3準拠
 テスト戦略ガイドライン v1.7準拠
@@ -9,7 +10,9 @@ Phase 2の中核コンポーネントの品質を保証します。
 """
 
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 
+import numpy as np
 import pytest
 
 from tests.mocks.mock_character_manager import MockCharacterManager
@@ -17,6 +20,7 @@ from vioratalk.core.base import ComponentState
 from vioratalk.core.dialogue_config import DialogueConfig
 from vioratalk.core.dialogue_manager import ConversationContext, ConversationState, DialogueManager
 from vioratalk.core.dialogue_state import DialogueTurn
+from vioratalk.core.exceptions import STTError
 
 
 @pytest.mark.unit
@@ -69,6 +73,25 @@ class TestDialogueManager:
             DialogueManager: 初期化済みマネージャー
         """
         manager = DialogueManager(config, character_manager)
+        await manager.initialize()
+        return manager
+
+    @pytest.fixture
+    async def initialized_manager_with_llm(self, config, character_manager) -> DialogueManager:
+        """LLMManager付き初期化済みDialogueManagerのフィクスチャ
+
+        Returns:
+            DialogueManager: LLMManager付き初期化済みマネージャー
+        """
+        # MockのLLMManagerを作成
+        mock_llm_manager = AsyncMock()
+        mock_llm_manager._state = ComponentState.NOT_INITIALIZED
+        # 修正: text → content
+        mock_llm_manager.generate = AsyncMock(
+            return_value=AsyncMock(content="こんにちは！今日はどんなお話をしましょうか？")
+        )
+
+        manager = DialogueManager(config, character_manager, llm_manager=mock_llm_manager)
         await manager.initialize()
         return manager
 
@@ -143,10 +166,10 @@ class TestDialogueManager:
     # ------------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_process_text_input_basic(self, initialized_manager):
-        """基本的なテキスト入力処理のテスト"""
+    async def test_process_text_input_basic(self, initialized_manager_with_llm):
+        """基本的なテキスト入力処理のテスト（LLMManager付き）"""
         user_input = "こんにちは"
-        turn = await initialized_manager.process_text_input(user_input)
+        turn = await initialized_manager_with_llm.process_text_input(user_input)
 
         assert isinstance(turn, DialogueTurn)
         assert turn.user_input == user_input
@@ -154,8 +177,10 @@ class TestDialogueManager:
         assert turn.turn_number == 1
         assert turn.character_id == "001_aoi"
         assert turn.emotion == "neutral"
-        assert turn.confidence == 0.95
-        assert turn.processing_time == 0.1
+        assert turn.confidence == 0.95  # LLMManagerがあるので0.95
+        assert turn.processing_time >= 0
+        # Phase 4: audio_responseフィールドの確認（テキスト入力ではNone）
+        assert turn.audio_response is None
 
     @pytest.mark.asyncio
     async def test_process_text_input_multiple_turns(self, initialized_manager):
@@ -172,6 +197,7 @@ class TestDialogueManager:
             assert turn.user_input == user_input
             assert turn.assistant_response == expected
             assert turn.turn_number == i
+            assert turn.audio_response is None  # Phase 4: テキスト入力では音声なし
 
         # 履歴確認
         history = initialized_manager.get_conversation_history()
@@ -184,6 +210,7 @@ class TestDialogueManager:
 
         # あおいキャラクターのデフォルト応答
         assert turn.assistant_response == "はい、承知いたしました。他に何かお手伝いできることはありますか？"
+        assert turn.audio_response is None
 
     @pytest.mark.asyncio
     async def test_process_text_input_empty(self, initialized_manager):
@@ -215,14 +242,86 @@ class TestDialogueManager:
         assert history[0].user_input == "入力2"
 
     # ------------------------------------------------------------------------
-    # process_audio_input()のテスト（Phase 2ではスタブ）
+    # process_audio_input()のテスト（Phase 4実装）
     # ------------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_process_audio_input_not_implemented(self, initialized_manager):
-        """音声入力処理の未実装テスト"""
-        with pytest.raises(NotImplementedError, match="Phase 3"):
-            await initialized_manager.process_audio_input(b"audio_data")
+    async def test_process_audio_input_phase4(self, initialized_manager):
+        """音声入力処理のテスト（Phase 4実装）
+
+        Phase 4では実際に音声処理が実装されているが、
+        STT/VAD/AudioCaptureが未設定の場合はエラーになる。
+        """
+        # 適切なサイズのfloat32音声データを作成（1秒分、16000Hz）
+        sample_rate = 16000
+        duration = 1.0
+        num_samples = int(sample_rate * duration)
+
+        # 無音のfloat32配列を作成
+        audio_array = np.zeros(num_samples, dtype=np.float32)
+        audio_data = audio_array.tobytes()
+
+        # STTエンジンが設定されていないため、STTErrorが発生
+        with pytest.raises(STTError, match="E2000"):
+            await initialized_manager.process_audio_input(audio_data)
+
+    @pytest.mark.asyncio
+    async def test_process_audio_input_with_mock_engines(self, config, character_manager):
+        """モックエンジンを使用した音声入力テスト"""
+        # モックエンジンの作成
+        mock_stt = AsyncMock()
+        mock_tts = AsyncMock()
+        mock_vad = AsyncMock()  # AsyncMockを使用
+        mock_llm = AsyncMock()
+
+        # 各モックの_state属性を設定
+        mock_stt._state = ComponentState.NOT_INITIALIZED
+        mock_tts._state = ComponentState.NOT_INITIALIZED
+        mock_vad._state = ComponentState.NOT_INITIALIZED
+        mock_llm._state = ComponentState.NOT_INITIALIZED
+
+        # STTのモック応答
+        mock_transcription = MagicMock()
+        mock_transcription.text = "こんにちは"
+        mock_transcription.confidence = 0.95
+        mock_stt.transcribe.return_value = mock_transcription
+
+        # TTSのモック応答
+        mock_synthesis = MagicMock()
+        mock_synthesis.audio_data = b"synthesized_audio"
+        mock_tts.synthesize.return_value = mock_synthesis
+
+        # VADのモック応答（音声区間を検出）
+        mock_segment = MagicMock()
+        mock_segment.start_sample = 0
+        mock_segment.end_sample = 16000
+        mock_segment.start_time = 0.0
+        mock_segment.end_time = 1.0
+        mock_vad.detect_segments = MagicMock(return_value=[mock_segment])  # 同期メソッドとして設定
+
+        # LLMのモック応答
+        # 修正: text → content
+        mock_llm.generate = AsyncMock(return_value=AsyncMock(content="こんにちは！今日はどんなお話をしましょうか？"))
+
+        manager = DialogueManager(
+            config,
+            character_manager,
+            llm_manager=mock_llm,
+            stt_engine=mock_stt,
+            tts_manager=mock_tts,
+            vad=mock_vad,
+        )
+        await manager.initialize()
+
+        # 音声データを処理
+        audio_data = np.zeros(16000, dtype=np.float32).tobytes()
+        turn = await manager.process_audio_input(audio_data)
+
+        # 結果を確認
+        assert turn.user_input == "こんにちは"
+        assert turn.assistant_response == "こんにちは！今日はどんなお話をしましょうか？"
+        assert turn.audio_response == b"synthesized_audio"  # Phase 4: 音声応答あり
+        assert turn.confidence == 0.95
 
     # ------------------------------------------------------------------------
     # 会話履歴管理のテスト
@@ -409,6 +508,7 @@ class TestDialogueManager:
             timestamp=datetime.now(),
             turn_number=1,
             character_id="001_aoi",
+            audio_response=b"test_audio",  # Phase 4: audio_responseも含む
         )
 
         context.add_turn(turn)
@@ -429,6 +529,7 @@ class TestDialogueManager:
                 timestamp=datetime.now(),
                 turn_number=i + 1,
                 character_id="001_aoi",
+                audio_response=None if i % 2 == 0 else b"audio",  # Phase 4: 交互に音声あり/なし
             )
             context.add_turn(turn)
 
@@ -437,6 +538,9 @@ class TestDialogueManager:
         assert len(recent) == 3
         assert recent[0].user_input == "入力3"
         assert recent[2].user_input == "入力5"
+        # Phase 4: 音声データの確認
+        assert recent[0].audio_response is None  # インデックス2（偶数）
+        assert recent[1].audio_response == b"audio"  # インデックス3（奇数）
 
         # 制限が0の場合
         recent = context.get_recent_turns(0)
@@ -453,6 +557,7 @@ class TestDialogueManager:
             timestamp=datetime.now(),
             turn_number=1,
             character_id="001_aoi",
+            audio_response=b"audio_data",  # Phase 4
         )
         context.add_turn(turn)
         context.state = ConversationState.PROCESSING
@@ -554,5 +659,6 @@ class TestDialogueManager:
         turn = await manager.process_text_input("こんにちは")
         assert turn.assistant_response == "こんにちは！今日はどんなお話をしましょうか？"
         assert turn.character_id == "001_aoi"  # デフォルトID使用
+        assert turn.audio_response is None  # Phase 4: テキスト入力では音声なし
 
         await manager.cleanup()

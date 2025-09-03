@@ -1,7 +1,8 @@
-"""test_gemini_engine.py - GeminiEngineの単体テスト（新SDK対応版）
+"""test_gemini_engine.py - GeminiEngineの単体テスト（新SDK対応・検索機能テスト追加版）
 
 GeminiEngineクラスの包括的な単体テスト。
 google-genai（新SDK）をモック化してAPIキーなしでテスト可能。
+Phase 4 Part 87: Google検索機能のテストを追加。
 
 テスト戦略ガイドライン v1.7準拠
 テスト実装ガイド v1.3準拠
@@ -85,6 +86,22 @@ def mock_genai():
 
 
 @pytest.fixture
+def mock_types():
+    """google.genai.typesのモック（検索機能テスト用）"""
+    with patch("vioratalk.core.llm.gemini_engine.types") as mock:
+        # Tool, GoogleSearchクラスのモック
+        mock.Tool = MagicMock()
+        mock.GoogleSearch = MagicMock()
+        mock.GenerateContentConfig = MagicMock()
+
+        # Tool(google_search=GoogleSearch())の動作をモック
+        mock_tool = MagicMock()
+        mock.Tool.return_value = mock_tool
+
+        yield mock
+
+
+@pytest.fixture
 def mock_genai_not_available():
     """google-genaiが未インストールの状態"""
     with patch("vioratalk.core.llm.gemini_engine.GENAI_AVAILABLE", False):
@@ -124,9 +141,35 @@ def llm_config():
 
 
 @pytest.fixture
-async def gemini_engine(mock_genai, mock_api_key_manager, mock_error_handler, llm_config):
+def llm_config_with_search():
+    """検索機能有効のLLMConfig（Phase 4 Part 87追加）"""
+    return LLMConfig(
+        engine="gemini",
+        model="gemini-2.0-flash",
+        temperature=0.7,
+        max_tokens=1000,
+        enable_search=True,
+        search_threshold=0.5,
+    )
+
+
+@pytest.fixture
+async def gemini_engine(
+    mock_genai, mock_types, mock_api_key_manager, mock_error_handler, llm_config
+):
     """初期化済みGeminiEngineフィクスチャ"""
     engine = GeminiEngine(config=llm_config, api_key="test-api-key")
+    await engine.initialize()
+    yield engine
+    await engine.cleanup()
+
+
+@pytest.fixture
+async def gemini_engine_with_search(
+    mock_genai, mock_types, mock_api_key_manager, mock_error_handler, llm_config_with_search
+):
+    """検索機能有効のGeminiEngineフィクスチャ（Phase 4 Part 87追加）"""
+    engine = GeminiEngine(config=llm_config_with_search, api_key="test-api-key")
     await engine.initialize()
     yield engine
     await engine.cleanup()
@@ -142,7 +185,7 @@ async def gemini_engine(mock_genai, mock_api_key_manager, mock_error_handler, ll
 class TestInitialization:
     """初期化関連のテスト"""
 
-    def test_init_with_api_key(self, mock_genai, mock_error_handler):
+    def test_init_with_api_key(self, mock_genai, mock_types, mock_error_handler):
         """APIキー付き初期化"""
         engine = GeminiEngine(api_key="test-api-key")
 
@@ -154,14 +197,16 @@ class TestInitialization:
         # 新SDK: Clientが初期化される
         mock_genai.Client.assert_called_once_with(api_key="test-api-key")
 
-    def test_init_without_api_key(self, mock_genai, mock_api_key_manager, mock_error_handler):
+    def test_init_without_api_key(
+        self, mock_genai, mock_types, mock_api_key_manager, mock_error_handler
+    ):
         """APIキーなし初期化（credential_managerから取得）"""
         engine = GeminiEngine()
 
         assert engine.api_key == "test-gemini-api-key"
         mock_api_key_manager.get_api_key.assert_called_once_with("gemini")
 
-    def test_init_with_config(self, mock_genai, mock_error_handler, llm_config):
+    def test_init_with_config(self, mock_genai, mock_types, mock_error_handler, llm_config):
         """設定付き初期化"""
         engine = GeminiEngine(config=llm_config, api_key="test-api-key")
 
@@ -169,6 +214,15 @@ class TestInitialization:
         assert engine.config.model == "gemini-2.0-flash"
         assert engine.config.temperature == 0.7
         assert engine.config.max_tokens == 1000
+
+    def test_init_with_search_config(
+        self, mock_genai, mock_types, mock_error_handler, llm_config_with_search
+    ):
+        """検索機能付き初期化（Phase 4 Part 87追加）"""
+        engine = GeminiEngine(config=llm_config_with_search, api_key="test-api-key")
+
+        assert engine.config.enable_search is True
+        assert engine.config.search_threshold == 0.5
 
     def test_init_without_genai_library(self, mock_genai_not_available):
         """google-genai未インストール時"""
@@ -179,7 +233,7 @@ class TestInitialization:
         assert "google-genai is not installed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_async_initialize(self, mock_genai, mock_error_handler):
+    async def test_async_initialize(self, mock_genai, mock_types, mock_error_handler):
         """非同期初期化"""
         engine = GeminiEngine(api_key="test-api-key")
 
@@ -197,7 +251,7 @@ class TestInitialization:
 
     @pytest.mark.asyncio
     async def test_initialize_without_api_key(
-        self, mock_genai, mock_api_key_manager, mock_error_handler
+        self, mock_genai, mock_types, mock_api_key_manager, mock_error_handler
     ):
         """APIキーなしでの非同期初期化"""
         engine = GeminiEngine()
@@ -212,7 +266,9 @@ class TestInitialization:
         assert engine.api_key == "test-gemini-api-key"
 
     @pytest.mark.asyncio
-    async def test_initialize_connection_test_failure(self, mock_genai, mock_error_handler):
+    async def test_initialize_connection_test_failure(
+        self, mock_genai, mock_types, mock_error_handler
+    ):
         """接続テスト失敗"""
         engine = GeminiEngine(api_key="test-api-key")
 
@@ -270,7 +326,7 @@ class TestGenerate:
         assert response.content == "システムプロンプトに基づく応答"
 
     @pytest.mark.asyncio
-    async def test_generate_without_client(self, mock_genai, mock_error_handler):
+    async def test_generate_without_client(self, mock_genai, mock_types, mock_error_handler):
         """クライアント未初期化時のエラー"""
         engine = GeminiEngine(api_key="test-api-key")
         engine.client = None  # クライアントなし
@@ -311,6 +367,21 @@ class TestGenerate:
         assert exc_info.value.error_code == "E2003"
 
     @pytest.mark.asyncio
+    async def test_generate_validation_error(self, gemini_engine, mock_genai):
+        """バリデーションエラー（Phase 4 Part 87追加）"""
+        # ツール関連のバリデーションエラーをシミュレート
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content.side_effect = MockGoogleGenerativeAIError(
+            "Invalid value at 'tools.0.Tool': Input should be a valid dictionary"
+        )
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            await gemini_engine.generate("テスト")
+
+        assert exc_info.value.error_code == "E2012"
+        assert "Invalid tool configuration" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_generate_api_error(self, gemini_engine, mock_genai):
         """その他のAPIエラー"""
         # 新SDK: Gemini固有エラーをシミュレート
@@ -337,6 +408,184 @@ class TestGenerate:
 
             assert exc_info.value.error_code == "E2000"
             assert "Generation failed" in str(exc_info.value)
+
+
+# ============================================================================
+# 検索機能テスト（Phase 4 Part 87追加）
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.phase(4)
+class TestSearchFunctionality:
+    """Google検索機能のテスト"""
+
+    def test_create_search_tools_gemini_20(self, gemini_engine_with_search, mock_types):
+        """Gemini 2.0系での検索ツール作成"""
+        gemini_engine_with_search.current_model = "gemini-2.0-flash"
+
+        # _create_search_tools()を呼び出し
+        tools = gemini_engine_with_search._create_search_tools()
+
+        # types.Tool(google_search=types.GoogleSearch())が呼ばれることを確認
+        assert tools is not None
+        assert len(tools) == 1
+        mock_types.Tool.assert_called_once()
+        mock_types.GoogleSearch.assert_called_once()
+
+    def test_create_search_tools_gemini_25(self, gemini_engine_with_search, mock_types):
+        """Gemini 2.5系での検索ツール作成"""
+        gemini_engine_with_search.current_model = "gemini-2.5-pro"
+
+        # _create_search_tools()を呼び出し
+        tools = gemini_engine_with_search._create_search_tools()
+
+        # types.Tool(google_search=types.GoogleSearch())が呼ばれることを確認
+        assert tools is not None
+        assert len(tools) == 1
+        mock_types.Tool.assert_called_once()
+        mock_types.GoogleSearch.assert_called_once()
+
+    def test_create_search_tools_gemini_15(self, gemini_engine_with_search, mock_types):
+        """Gemini 1.5系での検索ツール（未サポート）"""
+        gemini_engine_with_search.current_model = "gemini-1.5-flash"
+
+        # _create_search_tools()を呼び出し
+        tools = gemini_engine_with_search._create_search_tools()
+
+        # 1.5系は新SDKでサポートされないため、None
+        assert tools is None
+        mock_types.Tool.assert_not_called()
+
+    def test_create_search_tools_unsupported_model(self, gemini_engine_with_search, mock_types):
+        """未対応モデルでの検索ツール"""
+        gemini_engine_with_search.current_model = "unsupported-model"
+
+        # _create_search_tools()を呼び出し
+        tools = gemini_engine_with_search._create_search_tools()
+
+        # 未対応モデルではNone
+        assert tools is None
+        mock_types.Tool.assert_not_called()
+
+    def test_create_search_tools_types_unavailable(self, gemini_engine_with_search):
+        """typesが利用不可の場合"""
+        # typesをNoneにパッチ
+        with patch("vioratalk.core.llm.gemini_engine.types", None):
+            tools = gemini_engine_with_search._create_search_tools()
+            assert tools is None
+
+    @pytest.mark.asyncio
+    async def test_generate_with_search_enabled(
+        self, gemini_engine_with_search, mock_genai, mock_types
+    ):
+        """検索有効時の生成"""
+        # モックレスポンス設定（検索結果を含む）
+        mock_response = MagicMock()
+        mock_response.text = "検索結果を含む応答"
+
+        # grounding_metadataを設定
+        mock_response.grounding_metadata = MagicMock()
+        mock_response.grounding_metadata.web_search_queries = ["test query"]
+        mock_response.grounding_metadata.grounding_chunks = [
+            MagicMock(uri="https://example.com", title="Example")
+        ]
+
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = await gemini_engine_with_search.generate(
+            prompt="東京の天気は？", temperature=0.5, max_tokens=500
+        )
+
+        # GenerateContentConfigに検索ツールが含まれることを確認
+        call_args = mock_client.models.generate_content.call_args
+        assert response.content == "検索結果を含む応答"
+
+        # groundingメタデータが含まれることを確認
+        assert "grounding" in response.metadata
+        assert response.metadata["grounding"]["search_performed"] is True
+        assert len(response.metadata["grounding"]["search_queries"]) == 1
+        assert response.metadata["grounding"]["search_queries"][0] == "test query"
+        assert len(response.metadata["grounding"]["sources"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_generate_with_search_disabled(self, gemini_engine, mock_genai, mock_types):
+        """検索無効時の生成"""
+        # 検索無効設定を確認
+        assert gemini_engine.config.enable_search is False
+
+        # モックレスポンス設定（検索結果なし）
+        mock_response = MagicMock()
+        mock_response.text = "通常の応答"
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = await gemini_engine.generate(prompt="東京の天気は？", temperature=0.5, max_tokens=500)
+
+        # 検索ツールが呼ばれないことを確認
+        mock_types.Tool.assert_not_called()
+        mock_types.GoogleSearch.assert_not_called()
+
+        assert response.content == "通常の応答"
+        # groundingメタデータがないことを確認
+        assert "grounding" not in response.metadata
+
+    @pytest.mark.asyncio
+    async def test_generate_search_no_results(
+        self, gemini_engine_with_search, mock_genai, mock_types
+    ):
+        """検索有効だが結果がない場合"""
+        # モックレスポンス設定（grounding_metadataなし）
+        mock_response = MagicMock()
+        mock_response.text = "検索結果なしの応答"
+        # grounding_metadataをNoneに設定
+        mock_response.grounding_metadata = None
+
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = await gemini_engine_with_search.generate(prompt="特殊な質問", temperature=0.5)
+
+        assert response.content == "検索結果なしの応答"
+        # 検索は有効だったが結果がなかったことを記録
+        assert "grounding" in response.metadata
+        assert response.metadata["grounding"]["search_performed"] is False
+        assert "reason" in response.metadata["grounding"]
+
+    def test_process_response_with_search(self, gemini_engine_with_search):
+        """検索結果を含むレスポンス処理"""
+        # モックレスポンス
+        mock_response = MagicMock()
+        mock_response.text = "検索結果を含む応答"
+
+        # grounding_metadataを設定
+        mock_response.grounding_metadata = MagicMock()
+        mock_response.grounding_metadata.web_search_queries = ["query1", "query2"]
+
+        # grounding_chunksを設定
+        chunk1 = MagicMock()
+        chunk1.uri = "https://example1.com"
+        chunk1.title = "Example 1"
+        chunk2 = MagicMock()
+        chunk2.uri = "https://example2.com"
+        chunk2.title = "Example 2"
+        mock_response.grounding_metadata.grounding_chunks = [chunk1, chunk2]
+
+        # リクエスト
+        request = LLMRequest(prompt="テスト", temperature=0.7, max_tokens=100)
+
+        # 処理実行
+        result = gemini_engine_with_search._process_response_with_search(mock_response, request)
+
+        # 検証
+        assert result.content == "検索結果を含む応答"
+        assert result.metadata["grounding"]["search_performed"] is True
+        assert len(result.metadata["grounding"]["search_queries"]) == 2
+        assert result.metadata["grounding"]["search_queries"][0] == "query1"
+        assert len(result.metadata["grounding"]["sources"]) == 2
+        assert result.metadata["grounding"]["sources"][0]["uri"] == "https://example1.com"
+        assert result.metadata["grounding"]["source_count"] == 2
 
 
 # ============================================================================
@@ -369,7 +618,26 @@ class TestStreamGenerate:
         mock_client.models.generate_content_stream.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_stream_generate_without_client(self, mock_genai, mock_error_handler):
+    async def test_stream_generate_with_search(
+        self, gemini_engine_with_search, mock_genai, mock_types
+    ):
+        """検索有効時のストリーミング（検索は使用されない）"""
+        # ストリーミングレスポンスのモック
+        mock_chunks = [MagicMock(text="ストリーミング")]
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content_stream.return_value = iter(mock_chunks)
+
+        # ストリーミング生成
+        chunks = []
+        async for chunk in gemini_engine_with_search.stream_generate("テスト"):
+            chunks.append(chunk)
+
+        # ストリーミングでは検索機能が使用されないことを確認
+        mock_types.Tool.assert_not_called()
+        mock_types.GoogleSearch.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stream_generate_without_client(self, mock_genai, mock_types, mock_error_handler):
         """クライアント未初期化時のストリーミングエラー"""
         engine = GeminiEngine(api_key="test-api-key")
         engine.client = None
@@ -504,6 +772,38 @@ class TestHelperMethods:
 
 
 # ============================================================================
+# 環境変数からの設定読み込みテスト（Phase 4 Part 87追加）
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.phase(4)
+class TestEnvironmentConfiguration:
+    """環境変数からの設定読み込みテスト"""
+
+    def test_init_with_search_env_vars(self, mock_genai, mock_types, mock_error_handler):
+        """環境変数から検索設定を読み込み"""
+        with patch.dict(
+            "os.environ", {"GEMINI_ENABLE_SEARCH": "true", "GEMINI_SEARCH_THRESHOLD": "0.8"}
+        ):
+            engine = GeminiEngine(api_key="test-api-key")
+
+            assert engine.config.enable_search is True
+            assert engine.config.search_threshold == 0.8
+
+    def test_init_with_invalid_search_env_vars(self, mock_genai, mock_types, mock_error_handler):
+        """無効な環境変数値の処理"""
+        with patch.dict(
+            "os.environ",
+            {"GEMINI_ENABLE_SEARCH": "invalid", "GEMINI_SEARCH_THRESHOLD": "not_a_number"},
+        ):
+            # エラーは発生せず、デフォルト値が使用される
+            engine = GeminiEngine(api_key="test-api-key")
+
+            assert engine.config.enable_search is False  # デフォルト値
+
+
+# ============================================================================
 # クリーンアップテスト
 # ============================================================================
 
@@ -536,7 +836,9 @@ class TestIntegrationScenarios:
     """統合シナリオテスト"""
 
     @pytest.mark.asyncio
-    async def test_full_lifecycle(self, mock_genai, mock_api_key_manager, mock_error_handler):
+    async def test_full_lifecycle(
+        self, mock_genai, mock_types, mock_api_key_manager, mock_error_handler
+    ):
         """完全なライフサイクル"""
         # 1. 初期化
         engine = GeminiEngine()
@@ -561,6 +863,36 @@ class TestIntegrationScenarios:
         # 5. クリーンアップ
         await engine.cleanup()
         assert engine.client is None
+
+    @pytest.mark.asyncio
+    async def test_search_lifecycle(
+        self, mock_genai, mock_types, mock_api_key_manager, mock_error_handler
+    ):
+        """検索機能を含むライフサイクル（Phase 4 Part 87追加）"""
+        # 1. 検索機能付き初期化
+        config = LLMConfig(
+            engine="gemini", model="gemini-2.0-flash", enable_search=True, search_threshold=0.5
+        )
+        engine = GeminiEngine(config=config, api_key="test-api-key")
+
+        # 2. 非同期初期化
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content.return_value = MagicMock(text="Hello")
+        await engine.initialize()
+
+        # 3. 検索付き生成
+        mock_response = MagicMock()
+        mock_response.text = "検索結果を含む応答"
+        mock_response.grounding_metadata = MagicMock()
+        mock_response.grounding_metadata.web_search_queries = ["query"]
+        mock_response.grounding_metadata.grounding_chunks = []
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = await engine.generate("検索クエリ")
+        assert "grounding" in response.metadata
+
+        # 4. クリーンアップ
+        await engine.cleanup()
 
 
 # ============================================================================
@@ -604,9 +936,11 @@ class TestRealAPI:
 __all__ = [
     "TestInitialization",
     "TestGenerate",
+    "TestSearchFunctionality",
     "TestStreamGenerate",
     "TestModelManagement",
     "TestHelperMethods",
+    "TestEnvironmentConfiguration",
     "TestCleanup",
     "TestIntegrationScenarios",
     "TestRealAPI",

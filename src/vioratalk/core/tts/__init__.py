@@ -16,7 +16,7 @@ Phase 4実装範囲：
 Phase 6実装予定：
 - WindowsSAPIEngine: Windows SAPI実装
 - EdgeTTSEngine: Microsoft Edge TTS実装
-- MultiTTSEngine: 複数エンジン管理
+- TTSManager: 複数エンジン管理
 
 Phase 7-8実装予定：
 - AivisSpeechEngine: 高品質音声合成
@@ -69,7 +69,7 @@ from vioratalk.core.tts.pyttsx3_engine import Pyttsx3Engine
 # Phase 6で追加予定
 # from vioratalk.core.tts.windows_sapi_engine import WindowsSAPIEngine
 # from vioratalk.core.tts.edge_tts_engine import EdgeTTSEngine
-# from vioratalk.core.tts.multi_tts_engine import MultiTTSEngine
+# from vioratalk.core.tts.tts_manager import TTSManager
 
 # Phase 7-8で追加予定
 # from vioratalk.core.tts.aivisspeech_engine import AivisSpeechEngine

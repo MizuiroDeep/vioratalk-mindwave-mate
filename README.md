@@ -3,8 +3,8 @@
 [![Release](https://img.shields.io/github/v/release/MizuiroDeep/vioratalk-mindwave-mate)](https://github.com/MizuiroDeep/vioratalk-mindwave-mate/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![Coverage](https://img.shields.io/badge/coverage-78.17%25-brightgreen.svg)](https://github.com/MizuiroDeep/vioratalk-mindwave-mate)
-[![Tests](https://img.shields.io/badge/tests-742%20passed-success.svg)](https://github.com/MizuiroDeep/vioratalk-mindwave-mate)
+[![Coverage](https://img.shields.io/badge/coverage-82.21%25-brightgreen.svg)](https://github.com/MizuiroDeep/vioratalk-mindwave-mate)
+[![Tests](https://img.shields.io/badge/tests-894%20passed-success.svg)](https://github.com/MizuiroDeep/vioratalk-mindwave-mate)
 
 An AI voice assistant that brings natural conversation to your desktop.
 
@@ -139,7 +139,7 @@ poetry run pytest
 poetry run pytest --cov=vioratalk --cov-report=html
 ```
 
-Current status: 742 tests, 78.17% coverage
+Current status: 894 tests, 82.21% coverage
 
 ### Frequently Asked Questions
 
@@ -289,7 +289,7 @@ poetry run pytest
 poetry run pytest --cov=vioratalk --cov-report=html
 ```
 
-現在の状況: 742テスト、78.17%カバレッジ
+現在の状況: 894テスト、82.21%カバレッジ
 
 ### よくある質問
 

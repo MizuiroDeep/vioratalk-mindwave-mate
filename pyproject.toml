@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vioratalk"
-version = "0.4.0"
+version = "0.5.0"
 description = "AI Voice Assistant with Emotional Expression"
 authors = ["MizuiroDeep <36126374+MizuiroDeep@users.noreply.github.com>"]
 license = "MIT"

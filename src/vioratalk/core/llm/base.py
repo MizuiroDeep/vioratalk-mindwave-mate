@@ -11,7 +11,7 @@
 Phase 4実装範囲：
 - BaseLLMEngine抽象クラス
 - LLMRequest/LLMResponseデータクラス
-- LLMConfig設定クラス
+- LLMConfig設定クラス（検索機能拡張）
 """
 
 # 標準ライブラリ
@@ -104,7 +104,7 @@ class LLMResponse:
         usage: トークン使用量
         model: 使用されたモデル名
         finish_reason: 生成終了理由
-        metadata: 追加メタデータ
+        metadata: 追加メタデータ（検索結果含む）
         timestamp: 応答タイムスタンプ
     """
 
@@ -153,9 +153,10 @@ class LLMResponse:
 
 @dataclass
 class LLMConfig:
-    """LLMエンジン設定
+    """LLMエンジン設定（検索機能拡張版）
 
     データフォーマット仕様書 v1.5準拠
+    Phase 4 Part 84追加: Google検索機能設定
 
     Attributes:
         engine: エンジン名（'gemini', 'claude', 'chatgpt', 'ollama'）
@@ -166,6 +167,8 @@ class LLMConfig:
         timeout: タイムアウト秒数
         retry_count: リトライ回数
         streaming: ストリーミングのデフォルト設定
+        enable_search: Google検索機能の有効化（Phase 4 Part 84追加）
+        search_threshold: Dynamic Retrieval閾値（Phase 4 Part 84追加）
     """
 
     engine: str = "gemini"
@@ -176,6 +179,9 @@ class LLMConfig:
     timeout: float = 60.0
     retry_count: int = 3
     streaming: bool = False
+    # 検索機能設定（Phase 4 Part 84追加）
+    enable_search: bool = False  # デフォルト無効（料金発生防止）
+    search_threshold: float = 0.7  # Dynamic Retrieval閾値（0.0-1.0）
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "LLMConfig":
@@ -197,6 +203,8 @@ class LLMConfig:
             "timeout",
             "retry_count",
             "streaming",
+            "enable_search",  # Phase 4 Part 84追加
+            "search_threshold",  # Phase 4 Part 84追加
         }
         filtered_dict = {k: v for k, v in config_dict.items() if k in known_fields}
         return cls(**filtered_dict)
